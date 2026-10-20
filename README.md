@@ -40,7 +40,9 @@ For sharp thumbnails use a terminal with an image protocol (WezTerm, Kitty, Ghos
 
 ## Install
 
-There are no prebuilt binaries yet. Build from source:
+Download a prebuilt binary (glibc or static musl) from the [Releases](https://github.com/ncorrea-13/ytglide/releases/latest) page and put `ytglide` somewhere in your `PATH`.
+
+Or build it from source:
 
 ```sh
 git clone https://github.com/ncorrea-13/ytglide
