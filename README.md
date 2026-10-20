@@ -6,11 +6,16 @@
 
 [![CI](https://github.com/ncorrea-13/ytglide/actions/workflows/ci.yml/badge.svg)](https://github.com/ncorrea-13/ytglide/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/Rust-2024-000000?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![Ratatui](https://img.shields.io/badge/Ratatui-TUI-000000?logo=rust&logoColor=white)](https://ratatui.rs)
+[![Release](https://img.shields.io/github/v/release/ncorrea-13/ytglide?logo=github)](https://github.com/ncorrea-13/ytglide/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 </div>
 
 ---
+<p align="center">
+  <img src="docs/screenshot.png" alt="ytglide screenshot" width="600">
+</p>
 
 A small terminal UI, built with Ratatui and ratatui-image, to search YouTube, preview thumbnails and play videos or audio with [mpv](https://mpv.io/). It is a thin layer over `yt-dlp` (search) and `mpv` (playback), so there is no scraping and no account involved.
 
