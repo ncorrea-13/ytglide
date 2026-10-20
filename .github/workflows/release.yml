@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - run: scripts/package.sh
+      - uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+          draft: true
+          files: dist/*.tar.gz
