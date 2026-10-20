@@ -17,15 +17,15 @@
   <img src="docs/screenshot.png" alt="ytglide screenshot" width="600">
 </p>
 
-A small terminal UI, built with Ratatui and ratatui-image, to search YouTube, preview thumbnails and play videos or audio with [mpv](https://mpv.io/). It is a thin layer over `yt-dlp` (search) and `mpv` (playback), so there is no scraping and no account involved.
+A small terminal UI, built with Ratatui and ratatui-image, to search YouTube, preview thumbnails and play videos or audio with [mpv](https://mpv.io/). It is a thin layer over `yt-dlp` (search) and `mpv` (playback), so it needs no API key and no account.
 
-It is a Rust rewrite of the idea behind [ytsurf](https://github.com/Stan-breaks/ytsurf): the same "search, pick, play" flow, but with a built-in interface instead of `fzf` and `chafa` glued together by a shell script.
+It is a Rust take on the idea behind [ytsurf](https://github.com/Stan-breaks/ytsurf): the same "search, pick, play" flow, but with a built-in interface instead of `fzf` and `chafa`.
 
-This is a personal project. I'm not affiliated with YouTube or Google in any way. Use it at your own risk.
+This is a personal project. See the [disclaimer](#disclaimer).
 
 ## Features
 
-- Search through `yt-dlp` (`ytsearchN:`), no HTML scraping.
+- Search through `yt-dlp` (`ytsearchN:`), no API key needed.
 - Thumbnail preview drawn as a real image in terminals that support it (Kitty graphics, Sixel, iTerm2), with a Unicode halfblocks fallback everywhere else.
 - Plays video (capped at 720p by default) or audio only.
 - Pause, resume and stop from the UI, without leaving it.
@@ -162,7 +162,7 @@ The tests cover the output parsing, the formatting helpers and basic key handlin
 
 ## Disclaimer
 
-ytglide is not affiliated with, endorsed by, or sponsored by YouTube or Google. It only calls the public tools `yt-dlp` and `mpv` on your machine. You are responsible for how you use it and for following YouTube's terms of service.
+ytglide is not affiliated with, endorsed by, or sponsored by YouTube or Google. It only runs `yt-dlp`, `mpv` and `curl` on your machine, and it is provided as is, without warranty. You are responsible for how you use it and for following YouTube's terms of service.
 
 ## License
 
