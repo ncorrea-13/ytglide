@@ -48,7 +48,6 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     draw_status(frame, app, status, wide);
 }
 
-// The focused panel gets the accent border and a bold title; the rest recede.
 pub(super) fn panel(title: &str, focused: bool) -> Block<'_> {
     let (border, title_style) = if focused {
         (ACCENT, ACCENT.patch(BOLD))
@@ -108,7 +107,6 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-// Two rows: what is happening (mode, search, messages, now playing) and the keys, always visible.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let [info, keys] = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(area);
 

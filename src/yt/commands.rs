@@ -54,7 +54,6 @@ fn socket_path() -> Option<PathBuf> {
     Some(PathBuf::from(dir).join("ytglide-mpv.sock"))
 }
 
-// Toggles pause over mpv's IPC socket and returns the state mpv reports afterwards.
 pub fn toggle_pause() -> Result<bool> {
     let path = socket_path().context("XDG_RUNTIME_DIR is not set")?;
     let mut stream = UnixStream::connect(path).context("player not ready")?;
