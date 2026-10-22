@@ -202,6 +202,7 @@ impl App {
         let Some((mut child, _)) = self.playing.take() else {
             return false;
         };
+        let _ = yt::quit();
         let _ = child.kill();
         let _ = child.wait();
         true

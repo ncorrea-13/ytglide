@@ -76,6 +76,15 @@ pub fn toggle_pause() -> Result<bool> {
     bail!("player closed")
 }
 
+// Killing `flatpak run` leaves the sandboxed mpv alive, so ask mpv itself to exit.
+pub fn quit() -> Result<()> {
+    let path = socket_path().context("XDG_RUNTIME_DIR is not set")?;
+    let mut stream = UnixStream::connect(path).context("player not ready")?;
+    stream.set_write_timeout(Some(Duration::from_millis(500)))?;
+    stream.write_all(b"{\"command\":[\"quit\"]}\n")?;
+    Ok(())
+}
+
 // The caller owns the child so playback can be stopped from the UI.
 pub fn play(id: &str, audio_only: bool) -> Result<Child> {
     if !is_valid_id(id) {
