@@ -50,11 +50,14 @@ pub fn fetch_thumbnail(id: &str) -> Result<DynamicImage> {
 
 // XDG_RUNTIME_DIR is per-user and 0700; without it pausing is disabled rather than using a shared /tmp path.
 fn socket_path() -> Option<PathBuf> {
-    let dir = std::env::var_os("XDG_RUNTIME_DIR")?;
-    Some(PathBuf::from(dir).join("ytglide-mpv.sock"))
+    let dir = PathBuf::from(std::env::var_os("XDG_RUNTIME_DIR")?);
+    // Flatpak mpv only shares $XDG_RUNTIME_DIR/app/<id> with the host; any other path stays inside the sandbox.
+    if crate::config::get().mpv_cmd.contains("io.mpv.Mpv") {
+        return Some(dir.join("app/io.mpv.Mpv/ytglide-mpv.sock"));
+    }
+    Some(dir.join("ytglide-mpv.sock"))
 }
 
-// Toggles pause over mpv's IPC socket and returns the state mpv reports afterwards.
 pub fn toggle_pause() -> Result<bool> {
     let path = socket_path().context("XDG_RUNTIME_DIR is not set")?;
     let mut stream = UnixStream::connect(path).context("player not ready")?;
@@ -71,6 +74,15 @@ pub fn toggle_pause() -> Result<bool> {
         }
     }
     bail!("player closed")
+}
+
+// Killing `flatpak run` leaves the sandboxed mpv alive, so ask mpv itself to exit.
+pub fn quit() -> Result<()> {
+    let path = socket_path().context("XDG_RUNTIME_DIR is not set")?;
+    let mut stream = UnixStream::connect(path).context("player not ready")?;
+    stream.set_write_timeout(Some(Duration::from_millis(500)))?;
+    stream.write_all(b"{\"command\":[\"quit\"]}\n")?;
+    Ok(())
 }
 
 // The caller owns the child so playback can be stopped from the UI.
@@ -91,6 +103,9 @@ pub fn play(id: &str, audio_only: bool) -> Result<Child> {
     }
     if let Some(sock) = socket_path() {
         // A killed mpv leaves its socket behind; a stale file would make the next bind fail.
+        if let Some(parent) = sock.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         let _ = std::fs::remove_file(&sock);
         cmd.arg(format!("--input-ipc-server={}", sock.display()));
     }

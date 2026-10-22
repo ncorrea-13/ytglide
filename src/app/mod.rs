@@ -140,7 +140,6 @@ impl App {
         });
     }
 
-    // Fetches the selected video's thumbnail once; the cache is cleared on every new search.
     fn request_thumbnail(&mut self) {
         let Some(id) = self.selected().map(|v| v.id.clone()) else {
             return;
@@ -203,6 +202,7 @@ impl App {
         let Some((mut child, _)) = self.playing.take() else {
             return false;
         };
+        let _ = yt::quit();
         let _ = child.kill();
         let _ = child.wait();
         true
