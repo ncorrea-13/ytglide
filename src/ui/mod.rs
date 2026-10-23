@@ -84,8 +84,8 @@ const KEYS: &[(&str, &str)] = &[
     ("Search box and results", ""),
     ("ctrl+r", "go to the results"),
     ("ctrl+s", "go to the search box"),
-    ("ctrl+f", "searches popup"),
-    ("ctrl+o", "watched videos"),
+    ("ctrl+h", "searches popup"),
+    ("ctrl+v", "watched videos"),
     ("F1", "this help"),
     ("ctrl+c", "quit"),
 ];
@@ -254,8 +254,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
             ("enter", "search"),
-            ("ctrl+f", "searches"),
-            ("ctrl+o", "watched"),
+            ("ctrl+h", "searches"),
+            ("ctrl+v", "watched"),
         ],
         Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
         Focus::Help => vec![("any key", "close")],
@@ -263,7 +263,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             ("j/k", "move"),
             ("enter", "play"),
             ("a", "audio"),
-            ("ctrl+o", "watched"),
+            ("ctrl+v", "watched"),
         ],
     };
     if app.focus == Focus::Search && !app.results.is_empty() {

@@ -98,9 +98,11 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | -------- | ------------------------------------------------------------------- |
 | `ctrl+r` | go to the results                                                   |
 | `ctrl+s` | go to the search box                                                |
-| `ctrl+f` | searches popup (`j`/`k`, `enter` to pick, `esc` to close)           |
-| `ctrl+o` | show the videos you played, to replay one without searching         |
+| `ctrl+h` | searches popup (`j`/`k`, `enter` to pick, `esc` to close)           |
+| `ctrl+v`   | show the videos you played, to replay one without searching |
 | `F1`     | keybindings help                                                    |
+
+`ctrl+h` needs a terminal with the [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (Kitty, Ghostty, foot, or WezTerm with `config.enable_kitty_keyboard = true`); elsewhere the terminal sends it as `backspace`. `up` / `ctrl+p` / `ctrl+n` still walk the search history there.
 
 Starting a new video stops the previous one, and quitting ytglide stops whatever is playing.
 

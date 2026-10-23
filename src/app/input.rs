@@ -27,8 +27,8 @@ impl App {
                     self.focus = Focus::Search;
                     return;
                 }
-                KeyCode::Char('f') => return self.open_history(),
-                KeyCode::Char('o') => return self.show_history(),
+                KeyCode::Char('h') => return self.open_history(),
+                KeyCode::Char('v') => return self.show_history(),
                 _ => {}
             }
         }
@@ -223,7 +223,7 @@ mod tests {
     fn history_popup_picks_a_search() {
         let mut app = App::new(Picker::halfblocks());
         app.searches = vec!["one".into(), "two".into()];
-        app.handle_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
+        app.handle_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL));
         assert!(app.focus == Focus::History);
         press(&mut app, KeyCode::Char('j'));
         press(&mut app, KeyCode::Enter);
@@ -269,7 +269,7 @@ mod tests {
         let mut app = App::new(Picker::halfblocks());
         app.searches = vec!["one".into()];
         app.focus = Focus::List;
-        app.handle_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
+        app.handle_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL));
         assert!(app.focus == Focus::History);
         press(&mut app, KeyCode::Esc);
         assert!(app.focus == Focus::List);
