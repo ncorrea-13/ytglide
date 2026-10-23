@@ -23,8 +23,10 @@ impl App {
             KeyCode::Enter => self.submit_search(),
             KeyCode::Esc | KeyCode::Down | KeyCode::Tab => {
                 if self.results.is_empty() {
-                    if key.code == KeyCode::Esc {
-                        self.should_quit = true;
+                    match key.code {
+                        KeyCode::Esc => self.should_quit = true,
+                        KeyCode::Tab => self.show_history(),
+                        _ => {}
                     }
                 } else {
                     self.focus = Focus::List;
@@ -34,6 +36,7 @@ impl App {
             KeyCode::Char('p') if ctrl => self.history_older(),
             KeyCode::Char('n') if ctrl => self.history_newer(),
             KeyCode::Char('r') if ctrl => self.open_history(),
+            KeyCode::Char('o') if ctrl => self.show_history(),
             KeyCode::Left => {
                 if let Some(c) = self.query[..self.cursor].chars().next_back() {
                     self.cursor -= c.len_utf8();

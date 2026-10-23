@@ -198,17 +198,20 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             ("←/→", "move"),
             ("ctrl+w", "del word"),
             ("ctrl+u", "clear"),
-            ("ctrl+r", "history"),
-            ("esc", "results"),
+            ("ctrl+r", "searches"),
+            ("ctrl+o", "watched"),
         ],
         Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
         Focus::List => vec![
             ("j/k", "move"),
             ("enter", "play"),
             ("a", "audio"),
-            ("H", "history"),
+            ("H", "watched"),
         ],
     };
+    if app.focus == Focus::Search && !app.results.is_empty() {
+        hints.push(("esc", "results"));
+    }
     if app.focus == Focus::List {
         if app.playing.is_some() {
             hints.push(("space", "pause"));

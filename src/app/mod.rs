@@ -187,6 +187,7 @@ impl App {
         // Drop any search still in flight so it cannot replace the history view.
         self.search_seq += 1;
         self.loading = false;
+        self.focus = Focus::List;
         self.results = plays;
         self.history_view = true;
         self.thumbs.clear();
