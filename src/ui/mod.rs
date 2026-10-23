@@ -172,13 +172,14 @@ pub(super) fn fit(s: &str, max: usize) -> String {
     }
     let mut out = String::new();
     let mut width = 0;
-    for c in s.chars() {
-        let cw = Span::raw(c.to_string()).width();
-        if width + cw + 1 > max {
+    // By grapheme, not char: a flag is two chars and cutting between them leaves a lone letter.
+    for g in Line::from(s).styled_graphemes(Style::default()) {
+        let gw = Span::raw(g.symbol).width();
+        if width + gw + 1 > max {
             break;
         }
-        out.push(c);
-        width += cw;
+        out.push_str(g.symbol);
+        width += gw;
     }
     out.push('…');
     out
@@ -288,4 +289,15 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         spans.push(Span::styled(format!(" {action}   "), MUTED));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), keys);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fit_never_splits_a_flag() {
+        let cut = fit("🇳🇱🇳🇱🇳🇱", 4);
+        assert_eq!(cut, "🇳🇱…");
+    }
 }
