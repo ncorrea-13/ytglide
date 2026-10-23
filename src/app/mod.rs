@@ -38,6 +38,7 @@ pub struct Status {
 pub struct App {
     pub focus: Focus,
     pub query: String,
+    pub cursor: usize,
     pub results: Vec<yt::Video>,
     pub list: ListState,
     pub thumbs: HashMap<String, Thumb>,
@@ -60,6 +61,7 @@ impl App {
         Self {
             focus: Focus::Search,
             query: String::new(),
+            cursor: 0,
             results: Vec::new(),
             list: ListState::default(),
             thumbs: HashMap::new(),

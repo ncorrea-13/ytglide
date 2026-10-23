@@ -99,7 +99,7 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
     };
     frame.render_widget(Paragraph::new(Line::from(text)), inner);
     if focused {
-        let x = inner.x + Line::from(app.query.as_str()).width() as u16;
+        let x = inner.x + Line::from(&app.query[..app.cursor]).width() as u16;
         frame.set_cursor_position(Position::new(
             x.min(inner.right().saturating_sub(1)),
             inner.y,
@@ -144,7 +144,13 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     frame.render_widget(Paragraph::new(Line::from(spans)), info);
 
     let mut hints: Vec<(&str, &str)> = match app.focus {
-        Focus::Search => vec![("enter", "search"), ("esc", "results")],
+        Focus::Search => vec![
+            ("enter", "search"),
+            ("←/→", "move"),
+            ("ctrl+w", "del word"),
+            ("ctrl+u", "clear"),
+            ("esc", "results"),
+        ],
         Focus::List => vec![("j/k", "move"), ("enter", "play"), ("a", "audio")],
     };
     if app.focus == Focus::List {
