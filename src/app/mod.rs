@@ -22,6 +22,7 @@ const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 pub enum Focus {
     Search,
     List,
+    History,
 }
 
 pub enum Thumb {
@@ -40,7 +41,8 @@ pub struct App {
     pub focus: Focus,
     pub query: String,
     pub cursor: usize,
-    searches: Vec<String>,
+    pub searches: Vec<String>,
+    pub hist_list: ListState,
     hist_pos: usize,
     pub history_view: bool,
     pub results: Vec<yt::Video>,
@@ -67,6 +69,7 @@ impl App {
             query: String::new(),
             cursor: 0,
             searches: Vec::new(),
+            hist_list: ListState::default(),
             hist_pos: 0,
             history_view: false,
             results: Vec::new(),
@@ -144,6 +147,23 @@ impl App {
         self.hist_pos = pos;
         self.query = self.searches.get(pos).cloned().unwrap_or_default();
         self.cursor = self.query.len();
+    }
+
+    fn open_history(&mut self) {
+        if self.searches.is_empty() {
+            self.set_status("history is empty");
+            return;
+        }
+        self.hist_list.select(Some(0));
+        self.focus = Focus::History;
+    }
+
+    // The popup lists newest first, so row i is searches[len - 1 - i].
+    fn pick_history(&mut self) {
+        if let Some(i) = self.hist_list.selected() {
+            self.recall(self.searches.len() - 1 - i);
+        }
+        self.focus = Focus::Search;
     }
 
     fn history_older(&mut self) {

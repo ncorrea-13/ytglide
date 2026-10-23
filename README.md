@@ -77,6 +77,7 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `ctrl+w`              | delete the previous word       |
 | `ctrl+u`              | clear the query                |
 | `up` / `ctrl+p`, `ctrl+n` | previous / next search from history |
+| `ctrl+r`              | history popup (`j`/`k`, `enter` to pick, `esc` to close) |
 
 **Results**
 
