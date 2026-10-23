@@ -10,14 +10,9 @@ mod yt;
 
 use anyhow::Result;
 use app::App;
-use crossterm::{
-    event::{self, Event},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
-use ratatui::{Terminal, backend::CrosstermBackend};
+use crossterm::event::{self, Event};
+use ratatui::DefaultTerminal;
 use ratatui_image::picker::Picker;
-use std::io::stdout;
 use std::time::Duration;
 
 const TICK: Duration = Duration::from_millis(100);
@@ -30,22 +25,14 @@ fn main() -> Result<()> {
 
     config::get();
 
-    enable_raw_mode()?;
-    let mut out = stdout();
-    execute!(out, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(out);
-    let mut terminal = Terminal::new(backend)?;
-
+    let mut terminal = ratatui::init();
     let result = run(&mut terminal);
-
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    ratatui::restore();
 
     result
 }
 
-fn run(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>) -> Result<()> {
+fn run(terminal: &mut DefaultTerminal) -> Result<()> {
     // Must run after entering the alternate screen and before reading events: it queries the terminal.
     let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
     let mut app = App::new(picker);
