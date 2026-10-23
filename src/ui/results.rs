@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Nicolás Correa
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{MUTED, fit, meta, panel};
+use super::{MUTED, fit, meta, mode_style, panel};
 use crate::app::{App, Focus};
 use crate::yt;
 use ratatui::{
@@ -14,8 +14,13 @@ use ratatui::{
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let focused = app.focus == Focus::List;
-    let title = format!("Results {}", app.results.len());
-    let mut block = panel(&title, focused);
+    let name = if app.history_view {
+        "History"
+    } else {
+        "Results"
+    };
+    let title = format!("{name} {}", app.results.len());
+    let mut block = panel(&title, focused.then_some(mode_style(app)));
     if let Some(i) = app.list.selected() {
         block = block.title_bottom(
             Line::styled(format!(" {}/{} ", i + 1, app.results.len()), MUTED).right_aligned(),

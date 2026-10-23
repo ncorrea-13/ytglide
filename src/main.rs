@@ -5,17 +5,18 @@
 
 mod app;
 mod config;
+mod history;
 mod ui;
 mod yt;
 
 use anyhow::Result;
 use app::App;
-use crossterm::{
-    event::{self, Event},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+use crossterm::event::{
+    self, Event, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+    PushKeyboardEnhancementFlags,
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use crossterm::{execute, terminal::supports_keyboard_enhancement};
+use ratatui::DefaultTerminal;
 use ratatui_image::picker::Picker;
 use std::io::stdout;
 use std::time::Duration;
@@ -28,25 +29,30 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    enable_raw_mode()?;
-    let mut out = stdout();
-    execute!(out, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(out);
-    let mut terminal = Terminal::new(backend)?;
+    config::get();
 
+    let mut terminal = ratatui::init();
+    // ctrl+h is only told apart from Backspace by terminals with the kitty keyboard protocol.
+    let enhanced = supports_keyboard_enhancement().unwrap_or(false)
+        && execute!(
+            stdout(),
+            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
+        )
+        .is_ok();
     let result = run(&mut terminal);
-
-    disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-    terminal.show_cursor()?;
+    if enhanced {
+        let _ = execute!(stdout(), PopKeyboardEnhancementFlags);
+    }
+    ratatui::restore();
 
     result
 }
 
-fn run(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>) -> Result<()> {
+fn run(terminal: &mut DefaultTerminal) -> Result<()> {
     // Must run after entering the alternate screen and before reading events: it queries the terminal.
     let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
     let mut app = App::new(picker);
+    app.load_history();
 
     loop {
         terminal.draw(|frame| ui::draw(frame, &mut app))?;

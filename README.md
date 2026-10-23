@@ -72,7 +72,11 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | --------------------- | ------------------------------ |
 | `enter`               | run the search                 |
 | `esc` / `tab` / `down` | go to the results             |
+| `left` / `right`, `home` / `end` (`ctrl+a` / `ctrl+e`) | move the cursor |
+| `backspace` / `delete` | delete before / after the cursor |
+| `ctrl+w`              | delete the previous word       |
 | `ctrl+u`              | clear the query                |
+| `up` / `ctrl+p`, `ctrl+n` | previous / next search from history |
 
 **Results**
 
@@ -87,6 +91,18 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |
+
+**Search and results** (the same keys in both)
+
+| Key      | Action                                                              |
+| -------- | ------------------------------------------------------------------- |
+| `ctrl+r` | go to the results                                                   |
+| `ctrl+s` | go to the search box                                                |
+| `ctrl+h` | searches popup (`j`/`k`, `enter` to pick, `esc` to close)           |
+| `ctrl+v`   | show the videos you played, to replay one without searching |
+| `F1`     | keybindings help                                                    |
+
+`ctrl+h` needs a terminal with the [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (Kitty, Ghostty, foot, or WezTerm with `config.enable_kitty_keyboard = true`); elsewhere the terminal sends it as `backspace`. `up` / `ctrl+p` / `ctrl+n` still walk the search history there.
 
 Starting a new video stops the previous one, and quitting ytglide stops whatever is playing.
 
@@ -118,7 +134,8 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
   "mpv_cmd": "mpv",
   "curl_cmd": "curl",
   "results": 20,
-  "ytdl_format": "bestvideo[height<=720]+bestaudio/best"
+  "ytdl_format": "bestvideo[height<=720]+bestaudio/best",
+  "history_size": 100
 }
 ```
 
@@ -129,6 +146,7 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
 | `curl_cmd`    | Command used to download thumbnails.                                                                  |
 | `results`     | Number of results per search.                                                                         |
 | `ytdl_format` | yt-dlp format string passed to mpv for video. Without a cap mpv picks the best stream (4K/AV1), which can stutter or drift out of sync on modest hardware. Audio always uses `bestaudio/best`. |
+| `history_size` | Entries kept in each history (searches and plays). `0` disables history. Stored as `searches` and `plays.jsonl` next to `config.json`. |
 
 Your own `~/.config/mpv/mpv.conf` still applies on top.
 
@@ -136,6 +154,7 @@ Your own `~/.config/mpv/mpv.conf` still applies on top.
 
 - Pausing talks to mpv through a socket at `$XDG_RUNTIME_DIR/ytglide-mpv.sock`. If `XDG_RUNTIME_DIR` is not set, pausing is disabled instead of falling back to a shared directory such as `/tmp`.
 - Duration and view count come from `yt-dlp --flat-playlist`, so some results may not show a duration.
+- Moving past the last result loads the next page and appends it (up to 100 in total); the selection stays where it was. When a page brings nothing new, the status bar says "no more results".
 - Thumbnails are fetched one at a time when you select a video; neighbours are not prefetched.
 
 ## Architecture
@@ -146,6 +165,7 @@ Blocking work runs on plain threads and reports back through a channel, so the U
 src/
   main.rs        terminal setup and event loop
   config.rs      config.json loading
+  history.rs     search and play history files
   yt/            backend: search, thumbnails, playback, pause (yt-dlp / curl / mpv)
   app/           state, key handling, events coming back from threads
   ui/            rendering: search box, results, preview, status bar
@@ -155,7 +175,8 @@ src/
 
 ```sh
 cargo test
-cargo clippy --all-targets
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
 ```
 
 The tests cover the output parsing, the formatting helpers and basic key handling. The UI itself has no automated tests; check it by running it.

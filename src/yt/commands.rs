@@ -18,10 +18,12 @@ fn command(line: &str) -> Command {
     cmd
 }
 
-pub fn search(query: &str, limit: usize) -> Result<Vec<Video>> {
+// 1-based, inclusive: yt-dlp pages through the results but only returns start..=end.
+pub fn search(query: &str, start: usize, end: usize) -> Result<Vec<Video>> {
     let out = command(&crate::config::get().yt_dlp_cmd)
-        .arg(format!("ytsearch{limit}:{query}"))
+        .arg(format!("ytsearch{end}:{query}"))
         .args(["--flat-playlist", "-J", "--no-warnings"])
+        .args(["-I", &format!("{start}:{end}")])
         .stdin(Stdio::null())
         .output()
         .context("could not run yt-dlp")?;

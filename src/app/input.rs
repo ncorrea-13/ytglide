@@ -10,9 +10,33 @@ impl App {
             self.should_quit = true;
             return;
         }
+        if key.code == KeyCode::F(1) {
+            self.toggle_help();
+            return;
+        }
+        // Same keys in the search box and the results, so they never change with the mode.
+        if matches!(self.focus, Focus::Search | Focus::List)
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+        {
+            match key.code {
+                KeyCode::Char('r') if !self.results.is_empty() => {
+                    self.focus = Focus::List;
+                    return;
+                }
+                KeyCode::Char('s') => {
+                    self.focus = Focus::Search;
+                    return;
+                }
+                KeyCode::Char('h') => return self.open_history(),
+                KeyCode::Char('v') => return self.show_history(),
+                _ => {}
+            }
+        }
         match self.focus {
             Focus::Search => self.handle_search_key(key),
             Focus::List => self.handle_list_key(key),
+            Focus::History => self.handle_history_key(key),
+            Focus::Help => self.focus = self.help_from,
         }
     }
 
@@ -29,11 +53,58 @@ impl App {
                     self.focus = Focus::List;
                 }
             }
-            KeyCode::Backspace => {
-                self.query.pop();
+            KeyCode::Up => self.history_older(),
+            KeyCode::Char('p') if ctrl => self.history_older(),
+            KeyCode::Char('n') if ctrl => self.history_newer(),
+            KeyCode::Left => {
+                if let Some(c) = self.query[..self.cursor].chars().next_back() {
+                    self.cursor -= c.len_utf8();
+                }
             }
-            KeyCode::Char('u') if ctrl => self.query.clear(),
-            KeyCode::Char(c) if !ctrl => self.query.push(c),
+            KeyCode::Right => {
+                if let Some(c) = self.query[self.cursor..].chars().next() {
+                    self.cursor += c.len_utf8();
+                }
+            }
+            KeyCode::Home => self.cursor = 0,
+            KeyCode::End => self.cursor = self.query.len(),
+            KeyCode::Char('a') if ctrl => self.cursor = 0,
+            KeyCode::Char('e') if ctrl => self.cursor = self.query.len(),
+            KeyCode::Backspace => {
+                if let Some(c) = self.query[..self.cursor].chars().next_back() {
+                    self.cursor -= c.len_utf8();
+                    self.query.remove(self.cursor);
+                }
+            }
+            KeyCode::Delete => {
+                if self.cursor < self.query.len() {
+                    self.query.remove(self.cursor);
+                }
+            }
+            KeyCode::Char('w') if ctrl => {
+                let head = self.query[..self.cursor].trim_end();
+                let start = head.rfind(' ').map_or(0, |i| i + 1);
+                self.query.drain(start..self.cursor);
+                self.cursor = start;
+            }
+            KeyCode::Char('u') if ctrl => {
+                self.query.clear();
+                self.cursor = 0;
+            }
+            KeyCode::Char(c) if !ctrl => {
+                self.query.insert(self.cursor, c);
+                self.cursor += c.len_utf8();
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_history_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Enter => self.pick_history(),
+            KeyCode::Esc | KeyCode::Char('q') => self.focus = self.history_from,
+            KeyCode::Char('j') | KeyCode::Down => self.hist_list.select_next(),
+            KeyCode::Char('k') | KeyCode::Up => self.hist_list.select_previous(),
             _ => {}
         }
     }
@@ -78,6 +149,149 @@ mod tests {
         assert_eq!(app.query, "l");
         press(&mut app, KeyCode::Esc);
         assert!(app.should_quit);
+    }
+
+    #[test]
+    fn cursor_edits_in_place_with_multibyte() {
+        let mut app = App::new(Picker::halfblocks());
+        for c in "añb".chars() {
+            press(&mut app, KeyCode::Char(c));
+        }
+        press(&mut app, KeyCode::Left);
+        press(&mut app, KeyCode::Backspace);
+        assert_eq!(app.query, "ab");
+        press(&mut app, KeyCode::Char('x'));
+        assert_eq!(app.query, "axb");
+        press(&mut app, KeyCode::Home);
+        press(&mut app, KeyCode::Delete);
+        assert_eq!(app.query, "xb");
+    }
+
+    #[test]
+    fn cursor_motion_and_clear_keys() {
+        let mut app = App::new(Picker::halfblocks());
+        for c in "abc".chars() {
+            press(&mut app, KeyCode::Char(c));
+        }
+        let ctrl = |app: &mut App, c| {
+            app.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
+        };
+        press(&mut app, KeyCode::Home);
+        press(&mut app, KeyCode::Right);
+        assert_eq!(app.cursor, 1);
+        press(&mut app, KeyCode::End);
+        assert_eq!(app.cursor, 3);
+        press(&mut app, KeyCode::Delete);
+        assert_eq!(app.query, "abc");
+        ctrl(&mut app, 'a');
+        assert_eq!(app.cursor, 0);
+        ctrl(&mut app, 'e');
+        assert_eq!(app.cursor, 3);
+        ctrl(&mut app, 'u');
+        assert_eq!((app.query.as_str(), app.cursor), ("", 0));
+    }
+
+    #[test]
+    fn ctrl_w_deletes_previous_word() {
+        let mut app = App::new(Picker::halfblocks());
+        for c in "lofi hip hop".chars() {
+            press(&mut app, KeyCode::Char(c));
+        }
+        app.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "lofi hip ");
+        app.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "lofi ");
+    }
+
+    #[test]
+    fn up_and_ctrl_n_walk_the_search_history() {
+        let mut app = App::new(Picker::halfblocks());
+        app.searches = vec!["one".into(), "two".into()];
+        app.hist_pos = 2;
+        press(&mut app, KeyCode::Up);
+        assert_eq!(app.query, "two");
+        press(&mut app, KeyCode::Up);
+        press(&mut app, KeyCode::Up);
+        assert_eq!(app.query, "one");
+        app.handle_key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "two");
+        app.handle_key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "");
+    }
+
+    #[test]
+    fn history_popup_picks_a_search() {
+        let mut app = App::new(Picker::halfblocks());
+        app.searches = vec!["one".into(), "two".into()];
+        app.handle_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL));
+        assert!(app.focus == Focus::History);
+        press(&mut app, KeyCode::Char('j'));
+        press(&mut app, KeyCode::Enter);
+        assert_eq!(app.query, "one");
+        assert!(app.focus == Focus::Search);
+    }
+
+    #[test]
+    fn ctrl_r_and_ctrl_s_switch_between_results_and_search_box() {
+        let mut app = App::new(Picker::halfblocks());
+        let ctrl = |app: &mut App, c| {
+            app.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
+        };
+        ctrl(&mut app, 'r');
+        assert!(app.focus == Focus::Search);
+        app.results = vec![crate::yt::Video {
+            id: "rFZHOHl-L8A".into(),
+            title: "lofi".into(),
+            channel: String::new(),
+            duration: None,
+            views: None,
+        }];
+        ctrl(&mut app, 'r');
+        assert!(app.focus == Focus::List);
+        ctrl(&mut app, 's');
+        assert!(app.focus == Focus::Search);
+    }
+
+    #[test]
+    fn help_opens_with_f1_and_any_key_returns() {
+        let mut app = App::new(Picker::halfblocks());
+        app.focus = Focus::List;
+        press(&mut app, KeyCode::F(1));
+        assert!(app.focus == Focus::Help);
+        press(&mut app, KeyCode::Char('x'));
+        assert!(app.focus == Focus::List);
+        press(&mut app, KeyCode::F(1));
+        assert!(app.focus == Focus::Help);
+    }
+
+    #[test]
+    fn shortcuts_work_the_same_from_the_results() {
+        let mut app = App::new(Picker::halfblocks());
+        app.searches = vec!["one".into()];
+        app.focus = Focus::List;
+        app.handle_key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL));
+        assert!(app.focus == Focus::History);
+        press(&mut app, KeyCode::Esc);
+        assert!(app.focus == Focus::List);
+    }
+
+    #[test]
+    fn load_more_stops_when_exhausted() {
+        let mut app = App::new(Picker::halfblocks());
+        app.focus = Focus::List;
+        app.last_query = Some("lofi".into());
+        app.fetched = 20;
+        app.exhausted = true;
+        app.results = vec![crate::yt::Video {
+            id: "rFZHOHl-L8A".into(),
+            title: "lofi".into(),
+            channel: String::new(),
+            duration: None,
+            views: None,
+        }];
+        app.list.select(Some(0));
+        press(&mut app, KeyCode::Char('j'));
+        assert!(!app.loading);
     }
 
     #[test]

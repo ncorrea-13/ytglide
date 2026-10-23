@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an idea or an improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ytglide is a small terminal layer over `yt-dlp`, `mpv` and `curl`: no API key, no account, no async runtime. Ideas within that scope are welcome. Spanish is fine too.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+      description: What you're trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: How you imagine it working (keys, screens, config).
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use today, or other options you considered.
