@@ -28,6 +28,8 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    config::get();
+
     enable_raw_mode()?;
     let mut out = stdout();
     execute!(out, EnterAlternateScreen)?;
