@@ -1,0 +1,59 @@
+name: Bug report
+description: Something doesn't work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please check the [open issues](https://github.com/ncorrea-13/ytglide/issues) first; if yours is already there, add your case to it. Spanish is fine too.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Search for ...
+        2. Press ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install ytglide?
+      options:
+        - Prebuilt binary (glibc)
+        - Prebuilt binary (musl)
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `ytglide --version`.
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: Terminal emulator and, if the problem is about thumbnails, whether it supports Kitty, Sixel or iTerm2 images.
+      placeholder: WezTerm, Kitty, foot...
+  - type: input
+    id: deps
+    attributes:
+      label: yt-dlp and mpv versions
+      description: Output of `yt-dlp --version` and `mpv --version`. Mention if mpv is the Flatpak one.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Error text shown in the status bar, terminal output, screenshots. Remove anything private.
+      render: shell
