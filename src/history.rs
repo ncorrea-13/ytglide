@@ -39,10 +39,15 @@ pub fn record_search(list: &mut Vec<String>, query: &str) -> Result<()> {
     if cap == 0 {
         return Ok(());
     }
+    push_search(list, query, cap);
+    write("searches", &list.join("\n"))
+}
+
+// Moves the query to the end (most recent) and drops the oldest beyond `cap`.
+fn push_search(list: &mut Vec<String>, query: &str, cap: usize) {
     list.retain(|q| q != query);
     list.push(query.to_string());
     list.drain(..list.len().saturating_sub(cap));
-    write("searches", &list.join("\n"))
 }
 
 // Newest first, one JSON video per line. The file is user-editable input: ids are re-validated.
@@ -63,14 +68,23 @@ pub fn record_play(video: &Video) -> Result<()> {
         return Ok(());
     }
     let mut list = load_plays();
+    push_play(&mut list, video, cap);
+    write("plays.jsonl", &to_lines(&list)?)
+}
+
+// Puts the video first (most recent); a replay replaces its older entry.
+fn push_play(list: &mut Vec<Video>, video: &Video, cap: usize) {
     list.retain(|v| v.id != video.id);
     list.insert(0, video.clone());
     list.truncate(cap);
+}
+
+fn to_lines(list: &[Video]) -> Result<String> {
     let lines = list
         .iter()
         .map(serde_json::to_string)
         .collect::<Result<Vec<_>, _>>()?;
-    write("plays.jsonl", &lines.join("\n"))
+    Ok(lines.join("\n"))
 }
 
 #[cfg(test)]
@@ -87,5 +101,42 @@ mod tests {
         let plays = parse_plays(text);
         assert_eq!(plays.len(), 1);
         assert_eq!(plays[0].id, "rFZHOHl-L8A");
+    }
+
+    fn video(id: &str, title: &str) -> Video {
+        Video {
+            id: id.into(),
+            title: title.into(),
+            channel: String::new(),
+            duration: Some(65),
+            views: None,
+        }
+    }
+
+    #[test]
+    fn push_search_moves_repeats_to_the_end_and_caps() {
+        let mut list: Vec<String> = vec!["a".into(), "b".into(), "c".into()];
+        push_search(&mut list, "a", 3);
+        assert_eq!(list, ["b", "c", "a"]);
+        push_search(&mut list, "d", 3);
+        assert_eq!(list, ["c", "a", "d"]);
+    }
+
+    #[test]
+    fn push_play_puts_replays_first_and_caps() {
+        let mut list = vec![video("aaaaaaaaaaa", "old"), video("bbbbbbbbbbb", "b")];
+        push_play(&mut list, &video("bbbbbbbbbbb", "new"), 2);
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].title, "new");
+        push_play(&mut list, &video("ccccccccccc", "c"), 2);
+        let ids: Vec<_> = list.iter().map(|v| v.id.as_str()).collect();
+        assert_eq!(ids, ["ccccccccccc", "bbbbbbbbbbb"]);
+    }
+
+    #[test]
+    fn plays_survive_a_write_and_read() {
+        let list = vec![video("aaaaaaaaaaa", "ñandú"), video("bbbbbbbbbbb", "b")];
+        let text = to_lines(&list).expect("serializable");
+        assert_eq!(parse_plays(&text), list);
     }
 }

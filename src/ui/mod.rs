@@ -73,19 +73,20 @@ const KEYS: &[(&str, &str)] = &[
     ("←/→  home/end", "move the cursor"),
     ("ctrl+w  ctrl+u", "delete word / clear"),
     ("↑ ctrl+p  ctrl+n", "previous / next search"),
-    ("ctrl+r", "searches popup"),
-    ("ctrl+o", "watched videos"),
     ("tab  esc", "go to the results"),
     ("Results", ""),
     ("j/k  ↑/↓  g/G", "move / first / last"),
     ("enter  a", "play video / audio only"),
     ("space  s", "pause / stop"),
-    ("H", "watched videos"),
     ("p", "toggle preview (narrow)"),
     ("/  i  tab", "back to the search box"),
     ("q  esc", "quit"),
-    ("Anywhere", ""),
-    ("F1  ?", "this help"),
+    ("Search box and results", ""),
+    ("ctrl+r", "go to the results"),
+    ("ctrl+s", "go to the search box"),
+    ("ctrl+h", "searches popup"),
+    ("ctrl+v", "watched videos"),
+    ("F1", "this help"),
     ("ctrl+c", "quit"),
 ];
 
@@ -171,13 +172,14 @@ pub(super) fn fit(s: &str, max: usize) -> String {
     }
     let mut out = String::new();
     let mut width = 0;
-    for c in s.chars() {
-        let cw = Span::raw(c.to_string()).width();
-        if width + cw + 1 > max {
+    // By grapheme, not char: a flag is two chars and cutting between them leaves a lone letter.
+    for g in Line::from(s).styled_graphemes(Style::default()) {
+        let gw = Span::raw(g.symbol).width();
+        if width + gw + 1 > max {
             break;
         }
-        out.push(c);
-        width += cw;
+        out.push_str(g.symbol);
+        width += gw;
     }
     out.push('…');
     out
@@ -252,8 +254,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
             ("enter", "search"),
-            ("ctrl+r", "searches"),
-            ("ctrl+o", "watched"),
+            ("ctrl+h", "searches"),
+            ("ctrl+v", "watched"),
         ],
         Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
         Focus::Help => vec![("any key", "close")],
@@ -261,11 +263,11 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             ("j/k", "move"),
             ("enter", "play"),
             ("a", "audio"),
-            ("H", "watched"),
+            ("ctrl+v", "watched"),
         ],
     };
     if app.focus == Focus::Search && !app.results.is_empty() {
-        hints.push(("esc", "results"));
+        hints.push(("ctrl+r", "results"));
     }
     if app.focus == Focus::List {
         if app.playing.is_some() {
@@ -275,7 +277,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         if !wide {
             hints.push(("p", "preview"));
         }
-        hints.push(("/", "search"));
+        hints.push(("ctrl+s", "search"));
         hints.push(("q", "quit"));
     }
     if app.focus != Focus::Help {
@@ -287,4 +289,15 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         spans.push(Span::styled(format!(" {action}   "), MUTED));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), keys);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fit_never_splits_a_flag() {
+        let cut = fit("🇳🇱🇳🇱🇳🇱", 4);
+        assert_eq!(cut, "🇳🇱…");
+    }
 }

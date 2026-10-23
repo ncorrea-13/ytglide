@@ -11,9 +11,14 @@ mod yt;
 
 use anyhow::Result;
 use app::App;
-use crossterm::event::{self, Event};
+use crossterm::event::{
+    self, Event, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags,
+    PushKeyboardEnhancementFlags,
+};
+use crossterm::{execute, terminal::supports_keyboard_enhancement};
 use ratatui::DefaultTerminal;
 use ratatui_image::picker::Picker;
+use std::io::stdout;
 use std::time::Duration;
 
 const TICK: Duration = Duration::from_millis(100);
@@ -27,7 +32,17 @@ fn main() -> Result<()> {
     config::get();
 
     let mut terminal = ratatui::init();
+    // ctrl+h is only told apart from Backspace by terminals with the kitty keyboard protocol.
+    let enhanced = supports_keyboard_enhancement().unwrap_or(false)
+        && execute!(
+            stdout(),
+            PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
+        )
+        .is_ok();
     let result = run(&mut terminal);
+    if enhanced {
+        let _ = execute!(stdout(), PopKeyboardEnhancementFlags);
+    }
     ratatui::restore();
 
     result

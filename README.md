@@ -72,13 +72,11 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | --------------------- | ------------------------------ |
 | `enter`               | run the search                 |
 | `esc` / `tab` / `down` | go to the results             |
-| `tab` (no results yet), `ctrl+o` | show the play history |
 | `left` / `right`, `home` / `end` (`ctrl+a` / `ctrl+e`) | move the cursor |
 | `backspace` / `delete` | delete before / after the cursor |
 | `ctrl+w`              | delete the previous word       |
 | `ctrl+u`              | clear the query                |
 | `up` / `ctrl+p`, `ctrl+n` | previous / next search from history |
-| `ctrl+r`              | history popup (`j`/`k`, `enter` to pick, `esc` to close) |
 
 **Results**
 
@@ -90,11 +88,21 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `a`                | play audio only                         |
 | `space`            | pause / resume                          |
 | `s`                | stop                                    |
-| `H`                | show play history                       |
-| `?` / `F1`         | keybindings help (`F1` works everywhere) |
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |
+
+**Search and results** (the same keys in both)
+
+| Key      | Action                                                              |
+| -------- | ------------------------------------------------------------------- |
+| `ctrl+r` | go to the results                                                   |
+| `ctrl+s` | go to the search box                                                |
+| `ctrl+h` | searches popup (`j`/`k`, `enter` to pick, `esc` to close)           |
+| `ctrl+v`   | show the videos you played, to replay one without searching |
+| `F1`     | keybindings help                                                    |
+
+`ctrl+h` needs a terminal with the [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (Kitty, Ghostty, foot, or WezTerm with `config.enable_kitty_keyboard = true`); elsewhere the terminal sends it as `backspace`. `up` / `ctrl+p` / `ctrl+n` still walk the search history there.
 
 Starting a new video stops the previous one, and quitting ytglide stops whatever is playing.
 
@@ -146,6 +154,7 @@ Your own `~/.config/mpv/mpv.conf` still applies on top.
 
 - Pausing talks to mpv through a socket at `$XDG_RUNTIME_DIR/ytglide-mpv.sock`. If `XDG_RUNTIME_DIR` is not set, pausing is disabled instead of falling back to a shared directory such as `/tmp`.
 - Duration and view count come from `yt-dlp --flat-playlist`, so some results may not show a duration.
+- Moving past the last result loads the next page and appends it (up to 100 in total); the selection stays where it was. When a page brings nothing new, the status bar says "no more results".
 - Thumbnails are fetched one at a time when you select a video; neighbours are not prefetched.
 
 ## Architecture
