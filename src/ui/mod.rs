@@ -19,6 +19,8 @@ pub const ACCENT: Style = Style::new().fg(Color::Cyan);
 pub const MUTED: Style = Style::new().add_modifier(Modifier::DIM);
 pub const ERROR: Style = Style::new().fg(Color::Red);
 pub const HISTORY: Style = Style::new().fg(Color::Yellow);
+pub const HELP: Style = Style::new().fg(Color::Magenta);
+pub const WATCHED: Style = Style::new().fg(Color::Blue);
 pub const OK: Style = Style::new().fg(Color::Green);
 const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 
@@ -47,21 +49,72 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         results::draw(frame, app, body);
     }
     draw_status(frame, app, status, wide);
-    if app.focus == Focus::History {
-        draw_history(frame, app);
+    match app.focus {
+        Focus::History => draw_history(frame, app),
+        Focus::Help => draw_help(frame),
+        _ => {}
     }
+}
+
+fn centered(area: Rect, w: u16, h: u16) -> Rect {
+    let [row] = Layout::horizontal([Constraint::Length(w.min(area.width))])
+        .flex(Flex::Center)
+        .areas(area);
+    let [popup] = Layout::vertical([Constraint::Length(h.min(area.height))])
+        .flex(Flex::Center)
+        .areas(row);
+    popup
+}
+
+// Keep in sync with the keybinding tables in README.md.
+const KEYS: &[(&str, &str)] = &[
+    ("Search box", ""),
+    ("enter", "search"),
+    ("←/→  home/end", "move the cursor"),
+    ("ctrl+w  ctrl+u", "delete word / clear"),
+    ("↑ ctrl+p  ctrl+n", "previous / next search"),
+    ("ctrl+r", "searches popup"),
+    ("ctrl+o", "watched videos"),
+    ("tab  esc", "go to the results"),
+    ("Results", ""),
+    ("j/k  ↑/↓  g/G", "move / first / last"),
+    ("enter  a", "play video / audio only"),
+    ("space  s", "pause / stop"),
+    ("H", "watched videos"),
+    ("p", "toggle preview (narrow)"),
+    ("/  i  tab", "back to the search box"),
+    ("q  esc", "quit"),
+    ("Anywhere", ""),
+    ("F1  ?", "this help"),
+    ("ctrl+c", "quit"),
+];
+
+fn draw_help(frame: &mut Frame) {
+    let popup = centered(frame.area(), 52, KEYS.len() as u16 + 2);
+    let block = panel("Keybindings", Some(HELP));
+    let inner = block.inner(popup);
+    frame.render_widget(Clear, popup);
+    frame.render_widget(block, popup);
+    let lines: Vec<Line> = KEYS
+        .iter()
+        .map(|(key, action)| {
+            if action.is_empty() {
+                Line::styled(format!(" {key}"), BOLD)
+            } else {
+                Line::from(vec![
+                    Span::styled(format!("  {key:<18}"), HELP.patch(BOLD)),
+                    Span::raw(*action),
+                ])
+            }
+        })
+        .collect();
+    frame.render_widget(Paragraph::new(lines), inner);
 }
 
 fn draw_history(frame: &mut Frame, app: &mut App) {
     let area = frame.area();
-    let w = area.width.min(60);
     let h = (app.searches.len() as u16 + 2).clamp(3, area.height.saturating_sub(4).max(3));
-    let [popup] = Layout::horizontal([Constraint::Length(w)])
-        .flex(Flex::Center)
-        .areas(area);
-    let [popup] = Layout::vertical([Constraint::Length(h)])
-        .flex(Flex::Center)
-        .areas(popup);
+    let popup = centered(area, 60, h);
     let block = panel("History", Some(HISTORY));
     let inner = block.inner(popup);
     frame.render_widget(Clear, popup);
@@ -82,11 +135,13 @@ fn draw_history(frame: &mut Frame, app: &mut App) {
 }
 
 // Each mode owns one color: the badge, the focused panel and the key hints all follow it.
-fn mode_style(focus: Focus) -> Style {
-    match focus {
+pub(super) fn mode_style(app: &App) -> Style {
+    match app.focus {
         Focus::Search => ACCENT,
+        Focus::List if app.history_view => WATCHED,
         Focus::List => OK,
         Focus::History => HISTORY,
+        Focus::Help => HELP,
     }
 }
 
@@ -151,11 +206,13 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let [info, keys] = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(area);
 
-    let accent = mode_style(app.focus);
+    let accent = mode_style(app);
     let mode = match app.focus {
         Focus::Search => " SEARCH ",
+        Focus::List if app.history_view => " WATCHED ",
         Focus::List => " BROWSE ",
         Focus::History => " HISTORY ",
+        Focus::Help => " HELP ",
     };
     let version = format!("ytglide v{}", env!("CARGO_PKG_VERSION"));
     let mut spans = vec![
@@ -195,20 +252,21 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
             ("enter", "search"),
-            ("←/→", "move"),
-            ("ctrl+w", "del word"),
-            ("ctrl+u", "clear"),
-            ("ctrl+r", "history"),
-            ("esc", "results"),
+            ("ctrl+r", "searches"),
+            ("ctrl+o", "watched"),
         ],
         Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
+        Focus::Help => vec![("any key", "close")],
         Focus::List => vec![
             ("j/k", "move"),
             ("enter", "play"),
             ("a", "audio"),
-            ("H", "history"),
+            ("H", "watched"),
         ],
     };
+    if app.focus == Focus::Search && !app.results.is_empty() {
+        hints.push(("esc", "results"));
+    }
     if app.focus == Focus::List {
         if app.playing.is_some() {
             hints.push(("space", "pause"));
@@ -219,6 +277,9 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         }
         hints.push(("/", "search"));
         hints.push(("q", "quit"));
+    }
+    if app.focus != Focus::Help {
+        hints.push(("F1", "help"));
     }
     let mut spans = vec![Span::raw(" ")];
     for (key, action) in hints {

@@ -72,6 +72,7 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | --------------------- | ------------------------------ |
 | `enter`               | run the search                 |
 | `esc` / `tab` / `down` | go to the results             |
+| `tab` (no results yet), `ctrl+o` | show the play history |
 | `left` / `right`, `home` / `end` (`ctrl+a` / `ctrl+e`) | move the cursor |
 | `backspace` / `delete` | delete before / after the cursor |
 | `ctrl+w`              | delete the previous word       |
@@ -90,6 +91,7 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `space`            | pause / resume                          |
 | `s`                | stop                                    |
 | `H`                | show play history                       |
+| `?` / `F1`         | keybindings help (`F1` works everywhere) |
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |
