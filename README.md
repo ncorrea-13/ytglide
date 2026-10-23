@@ -72,13 +72,11 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | --------------------- | ------------------------------ |
 | `enter`               | run the search                 |
 | `esc` / `tab` / `down` | go to the results             |
-| `tab` (no results yet), `ctrl+o` | show the play history |
 | `left` / `right`, `home` / `end` (`ctrl+a` / `ctrl+e`) | move the cursor |
 | `backspace` / `delete` | delete before / after the cursor |
 | `ctrl+w`              | delete the previous word       |
 | `ctrl+u`              | clear the query                |
 | `up` / `ctrl+p`, `ctrl+n` | previous / next search from history |
-| `ctrl+r`              | history popup (`j`/`k`, `enter` to pick, `esc` to close) |
 
 **Results**
 
@@ -90,11 +88,19 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `a`                | play audio only                         |
 | `space`            | pause / resume                          |
 | `s`                | stop                                    |
-| `H`                | show play history                       |
-| `?` / `F1`         | keybindings help (`F1` works everywhere) |
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |
+
+**Search and results** (the same keys in both)
+
+| Key      | Action                                                              |
+| -------- | ------------------------------------------------------------------- |
+| `ctrl+r` | go to the results                                                   |
+| `ctrl+s` | go to the search box                                                |
+| `ctrl+f` | searches popup (`j`/`k`, `enter` to pick, `esc` to close)           |
+| `ctrl+o` | show the videos you played, to replay one without searching         |
+| `F1`     | keybindings help                                                    |
 
 Starting a new video stops the previous one, and quitting ytglide stops whatever is playing.
 

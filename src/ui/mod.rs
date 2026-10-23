@@ -73,19 +73,20 @@ const KEYS: &[(&str, &str)] = &[
     ("←/→  home/end", "move the cursor"),
     ("ctrl+w  ctrl+u", "delete word / clear"),
     ("↑ ctrl+p  ctrl+n", "previous / next search"),
-    ("ctrl+r", "searches popup"),
-    ("ctrl+o", "watched videos"),
     ("tab  esc", "go to the results"),
     ("Results", ""),
     ("j/k  ↑/↓  g/G", "move / first / last"),
     ("enter  a", "play video / audio only"),
     ("space  s", "pause / stop"),
-    ("H", "watched videos"),
     ("p", "toggle preview (narrow)"),
     ("/  i  tab", "back to the search box"),
     ("q  esc", "quit"),
-    ("Anywhere", ""),
-    ("F1  ?", "this help"),
+    ("Search box and results", ""),
+    ("ctrl+r", "go to the results"),
+    ("ctrl+s", "go to the search box"),
+    ("ctrl+f", "searches popup"),
+    ("ctrl+o", "watched videos"),
+    ("F1", "this help"),
     ("ctrl+c", "quit"),
 ];
 
@@ -252,7 +253,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
             ("enter", "search"),
-            ("ctrl+r", "searches"),
+            ("ctrl+f", "searches"),
             ("ctrl+o", "watched"),
         ],
         Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
@@ -261,11 +262,11 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             ("j/k", "move"),
             ("enter", "play"),
             ("a", "audio"),
-            ("H", "watched"),
+            ("ctrl+o", "watched"),
         ],
     };
     if app.focus == Focus::Search && !app.results.is_empty() {
-        hints.push(("esc", "results"));
+        hints.push(("ctrl+r", "results"));
     }
     if app.focus == Focus::List {
         if app.playing.is_some() {
@@ -275,7 +276,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         if !wide {
             hints.push(("p", "preview"));
         }
-        hints.push(("/", "search"));
+        hints.push(("ctrl+s", "search"));
         hints.push(("q", "quit"));
     }
     if app.focus != Focus::Help {

@@ -14,6 +14,24 @@ impl App {
             self.toggle_help();
             return;
         }
+        // Same keys in the search box and the results, so they never change with the mode.
+        if matches!(self.focus, Focus::Search | Focus::List)
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+        {
+            match key.code {
+                KeyCode::Char('r') if !self.results.is_empty() => {
+                    self.focus = Focus::List;
+                    return;
+                }
+                KeyCode::Char('s') => {
+                    self.focus = Focus::Search;
+                    return;
+                }
+                KeyCode::Char('f') => return self.open_history(),
+                KeyCode::Char('o') => return self.show_history(),
+                _ => {}
+            }
+        }
         match self.focus {
             Focus::Search => self.handle_search_key(key),
             Focus::List => self.handle_list_key(key),
@@ -28,10 +46,8 @@ impl App {
             KeyCode::Enter => self.submit_search(),
             KeyCode::Esc | KeyCode::Down | KeyCode::Tab => {
                 if self.results.is_empty() {
-                    match key.code {
-                        KeyCode::Esc => self.should_quit = true,
-                        KeyCode::Tab => self.show_history(),
-                        _ => {}
+                    if key.code == KeyCode::Esc {
+                        self.should_quit = true;
                     }
                 } else {
                     self.focus = Focus::List;
@@ -40,8 +56,6 @@ impl App {
             KeyCode::Up => self.history_older(),
             KeyCode::Char('p') if ctrl => self.history_older(),
             KeyCode::Char('n') if ctrl => self.history_newer(),
-            KeyCode::Char('r') if ctrl => self.open_history(),
-            KeyCode::Char('o') if ctrl => self.show_history(),
             KeyCode::Left => {
                 if let Some(c) = self.query[..self.cursor].chars().next_back() {
                     self.cursor -= c.len_utf8();
@@ -88,7 +102,7 @@ impl App {
     fn handle_history_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Enter => self.pick_history(),
-            KeyCode::Esc | KeyCode::Char('q') => self.focus = Focus::Search,
+            KeyCode::Esc | KeyCode::Char('q') => self.focus = self.history_from,
             KeyCode::Char('j') | KeyCode::Down => self.hist_list.select_next(),
             KeyCode::Char('k') | KeyCode::Up => self.hist_list.select_previous(),
             _ => {}
@@ -111,8 +125,6 @@ impl App {
                     self.set_status("stopped");
                 }
             }
-            KeyCode::Char('H') => self.show_history(),
-            KeyCode::Char('?') => self.toggle_help(),
             KeyCode::Char('p') => self.show_preview = !self.show_preview,
             _ => {}
         }
@@ -211,11 +223,32 @@ mod tests {
     fn history_popup_picks_a_search() {
         let mut app = App::new(Picker::halfblocks());
         app.searches = vec!["one".into(), "two".into()];
-        app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL));
+        app.handle_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
         assert!(app.focus == Focus::History);
         press(&mut app, KeyCode::Char('j'));
         press(&mut app, KeyCode::Enter);
         assert_eq!(app.query, "one");
+        assert!(app.focus == Focus::Search);
+    }
+
+    #[test]
+    fn ctrl_r_and_ctrl_s_switch_between_results_and_search_box() {
+        let mut app = App::new(Picker::halfblocks());
+        let ctrl = |app: &mut App, c| {
+            app.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
+        };
+        ctrl(&mut app, 'r');
+        assert!(app.focus == Focus::Search);
+        app.results = vec![crate::yt::Video {
+            id: "rFZHOHl-L8A".into(),
+            title: "lofi".into(),
+            channel: String::new(),
+            duration: None,
+            views: None,
+        }];
+        ctrl(&mut app, 'r');
+        assert!(app.focus == Focus::List);
+        ctrl(&mut app, 's');
         assert!(app.focus == Focus::Search);
     }
 
@@ -227,8 +260,19 @@ mod tests {
         assert!(app.focus == Focus::Help);
         press(&mut app, KeyCode::Char('x'));
         assert!(app.focus == Focus::List);
-        press(&mut app, KeyCode::Char('?'));
+        press(&mut app, KeyCode::F(1));
         assert!(app.focus == Focus::Help);
+    }
+
+    #[test]
+    fn shortcuts_work_the_same_from_the_results() {
+        let mut app = App::new(Picker::halfblocks());
+        app.searches = vec!["one".into()];
+        app.focus = Focus::List;
+        app.handle_key(KeyEvent::new(KeyCode::Char('f'), KeyModifiers::CONTROL));
+        assert!(app.focus == Focus::History);
+        press(&mut app, KeyCode::Esc);
+        assert!(app.focus == Focus::List);
     }
 
     #[test]

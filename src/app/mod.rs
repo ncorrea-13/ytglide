@@ -52,6 +52,7 @@ pub struct App {
     fetched: usize,
     exhausted: bool,
     help_from: Focus,
+    history_from: Focus,
     pub history_view: bool,
     pub results: Vec<yt::Video>,
     pub list: ListState,
@@ -83,6 +84,7 @@ impl App {
             fetched: 0,
             exhausted: false,
             help_from: Focus::Search,
+            history_from: Focus::Search,
             history_view: false,
             results: Vec::new(),
             list: ListState::default(),
@@ -176,6 +178,7 @@ impl App {
             return;
         }
         self.hist_list.select(Some(0));
+        self.history_from = self.focus;
         self.focus = Focus::History;
     }
 
