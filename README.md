@@ -155,7 +155,8 @@ src/
 
 ```sh
 cargo test
-cargo clippy --all-targets
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
 ```
 
 The tests cover the output parsing, the formatting helpers and basic key handling. The UI itself has no automated tests; check it by running it.
