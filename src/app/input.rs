@@ -156,6 +156,30 @@ mod tests {
     }
 
     #[test]
+    fn cursor_motion_and_clear_keys() {
+        let mut app = App::new(Picker::halfblocks());
+        for c in "abc".chars() {
+            press(&mut app, KeyCode::Char(c));
+        }
+        let ctrl = |app: &mut App, c| {
+            app.handle_key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
+        };
+        press(&mut app, KeyCode::Home);
+        press(&mut app, KeyCode::Right);
+        assert_eq!(app.cursor, 1);
+        press(&mut app, KeyCode::End);
+        assert_eq!(app.cursor, 3);
+        press(&mut app, KeyCode::Delete);
+        assert_eq!(app.query, "abc");
+        ctrl(&mut app, 'a');
+        assert_eq!(app.cursor, 0);
+        ctrl(&mut app, 'e');
+        assert_eq!(app.cursor, 3);
+        ctrl(&mut app, 'u');
+        assert_eq!((app.query.as_str(), app.cursor), ("", 0));
+    }
+
+    #[test]
     fn ctrl_w_deletes_previous_word() {
         let mut app = App::new(Picker::halfblocks());
         for c in "lofi hip hop".chars() {
