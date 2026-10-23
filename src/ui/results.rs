@@ -14,7 +14,12 @@ use ratatui::{
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
     let focused = app.focus == Focus::List;
-    let title = format!("Results {}", app.results.len());
+    let name = if app.history_view {
+        "History"
+    } else {
+        "Results"
+    };
+    let title = format!("{name} {}", app.results.len());
     let mut block = panel(&title, focused);
     if let Some(i) = app.list.selected() {
         block = block.title_bottom(

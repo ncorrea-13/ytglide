@@ -5,6 +5,7 @@ mod events;
 mod input;
 
 use crate::config;
+use crate::history;
 use crate::yt;
 use events::YtEvent;
 use ratatui::widgets::ListState;
@@ -21,6 +22,7 @@ const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 pub enum Focus {
     Search,
     List,
+    History,
 }
 
 pub enum Thumb {
@@ -38,6 +40,11 @@ pub struct Status {
 pub struct App {
     pub focus: Focus,
     pub query: String,
+    pub cursor: usize,
+    pub searches: Vec<String>,
+    pub hist_list: ListState,
+    hist_pos: usize,
+    pub history_view: bool,
     pub results: Vec<yt::Video>,
     pub list: ListState,
     pub thumbs: HashMap<String, Thumb>,
@@ -60,6 +67,11 @@ impl App {
         Self {
             focus: Focus::Search,
             query: String::new(),
+            cursor: 0,
+            searches: Vec::new(),
+            hist_list: ListState::default(),
+            hist_pos: 0,
+            history_view: false,
             results: Vec::new(),
             list: ListState::default(),
             thumbs: HashMap::new(),
@@ -126,11 +138,71 @@ impl App {
         }
     }
 
+    pub fn load_history(&mut self) {
+        self.searches = history::load_searches();
+        self.hist_pos = self.searches.len();
+    }
+
+    fn recall(&mut self, pos: usize) {
+        self.hist_pos = pos;
+        self.query = self.searches.get(pos).cloned().unwrap_or_default();
+        self.cursor = self.query.len();
+    }
+
+    fn open_history(&mut self) {
+        if self.searches.is_empty() {
+            self.set_status("history is empty");
+            return;
+        }
+        self.hist_list.select(Some(0));
+        self.focus = Focus::History;
+    }
+
+    // The popup lists newest first, so row i is searches[len - 1 - i].
+    fn pick_history(&mut self) {
+        if let Some(i) = self.hist_list.selected() {
+            self.recall(self.searches.len() - 1 - i);
+        }
+        self.focus = Focus::Search;
+    }
+
+    fn history_older(&mut self) {
+        if self.hist_pos > 0 {
+            self.recall(self.hist_pos - 1);
+        }
+    }
+
+    fn history_newer(&mut self) {
+        if self.hist_pos < self.searches.len() {
+            self.recall(self.hist_pos + 1);
+        }
+    }
+
+    fn show_history(&mut self) {
+        let plays = history::load_plays();
+        if plays.is_empty() {
+            self.set_status("history is empty");
+            return;
+        }
+        // Drop any search still in flight so it cannot replace the history view.
+        self.search_seq += 1;
+        self.loading = false;
+        self.results = plays;
+        self.history_view = true;
+        self.thumbs.clear();
+        self.list.select(Some(0));
+        self.request_thumbnail();
+    }
+
     fn submit_search(&mut self) {
         let query = self.query.trim().to_string();
         if query.is_empty() {
             return;
         }
+        if let Err(e) = history::record_search(&mut self.searches, &query) {
+            self.set_error(e.to_string());
+        }
+        self.hist_pos = self.searches.len();
         self.search_seq += 1;
         let seq = self.search_seq;
         self.loading = true;
@@ -176,13 +248,17 @@ impl App {
     }
 
     fn play_selected(&mut self, audio_only: bool) {
-        let Some(v) = self.selected() else { return };
-        let (id, title) = (v.id.clone(), v.title.clone());
+        let Some(v) = self.selected().cloned() else {
+            return;
+        };
         self.stop_player();
-        match yt::play(&id, audio_only) {
+        match yt::play(&v.id, audio_only) {
             Ok(child) => {
-                self.playing = Some((child, title));
+                self.playing = Some((child, v.title.clone()));
                 self.paused = false;
+                if let Err(e) = history::record_play(&v) {
+                    self.set_error(e.to_string());
+                }
             }
             Err(e) => self.set_error(e.to_string()),
         }

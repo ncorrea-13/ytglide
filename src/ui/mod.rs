@@ -8,16 +8,17 @@ use crate::app::{App, Focus};
 use crate::yt;
 use ratatui::{
     Frame,
-    layout::{Constraint, Layout, Margin, Position, Rect},
+    layout::{Constraint, Flex, Layout, Margin, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Paragraph},
+    widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
 };
 
 // ANSI colors and DIM on purpose: no background of our own, everything follows the terminal theme.
 pub const ACCENT: Style = Style::new().fg(Color::Cyan);
 pub const MUTED: Style = Style::new().add_modifier(Modifier::DIM);
 pub const ERROR: Style = Style::new().fg(Color::Red);
+pub const HISTORY: Style = Style::new().fg(Color::Yellow);
 pub const OK: Style = Style::new().fg(Color::Green);
 const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 
@@ -46,6 +47,38 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         results::draw(frame, app, body);
     }
     draw_status(frame, app, status, wide);
+    if app.focus == Focus::History {
+        draw_history(frame, app);
+    }
+}
+
+fn draw_history(frame: &mut Frame, app: &mut App) {
+    let area = frame.area();
+    let w = area.width.min(60);
+    let h = (app.searches.len() as u16 + 2).clamp(3, area.height.saturating_sub(4).max(3));
+    let [popup] = Layout::horizontal([Constraint::Length(w)])
+        .flex(Flex::Center)
+        .areas(area);
+    let [popup] = Layout::vertical([Constraint::Length(h)])
+        .flex(Flex::Center)
+        .areas(popup);
+    let block = panel("History", true);
+    let inner = block.inner(popup);
+    frame.render_widget(Clear, popup);
+    frame.render_widget(block, popup);
+    let width = (inner.width as usize).saturating_sub(2);
+    let items: Vec<ListItem> = app
+        .searches
+        .iter()
+        .rev()
+        .map(|q| ListItem::new(format!(" {}", fit(q, width))))
+        .collect();
+    let bar = Style::new().add_modifier(Modifier::REVERSED);
+    frame.render_stateful_widget(
+        List::new(items).highlight_style(bar),
+        inner,
+        &mut app.hist_list,
+    );
 }
 
 pub(super) fn panel(title: &str, focused: bool) -> Block<'_> {
@@ -99,7 +132,7 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
     };
     frame.render_widget(Paragraph::new(Line::from(text)), inner);
     if focused {
-        let x = inner.x + Line::from(app.query.as_str()).width() as u16;
+        let x = inner.x + Line::from(&app.query[..app.cursor]).width() as u16;
         frame.set_cursor_position(Position::new(
             x.min(inner.right().saturating_sub(1)),
             inner.y,
@@ -113,6 +146,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let (mode, mode_style) = match app.focus {
         Focus::Search => (" SEARCH ", ACCENT),
         Focus::List => (" BROWSE ", OK),
+        Focus::History => (" HISTORY ", HISTORY),
     };
     let mut spans = vec![
         Span::styled(
@@ -144,8 +178,21 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     frame.render_widget(Paragraph::new(Line::from(spans)), info);
 
     let mut hints: Vec<(&str, &str)> = match app.focus {
-        Focus::Search => vec![("enter", "search"), ("esc", "results")],
-        Focus::List => vec![("j/k", "move"), ("enter", "play"), ("a", "audio")],
+        Focus::Search => vec![
+            ("enter", "search"),
+            ("←/→", "move"),
+            ("ctrl+w", "del word"),
+            ("ctrl+u", "clear"),
+            ("ctrl+r", "history"),
+            ("esc", "results"),
+        ],
+        Focus::History => vec![("j/k", "move"), ("enter", "pick"), ("esc", "close")],
+        Focus::List => vec![
+            ("j/k", "move"),
+            ("enter", "play"),
+            ("a", "audio"),
+            ("H", "history"),
+        ],
     };
     if app.focus == Focus::List {
         if app.playing.is_some() {

@@ -5,6 +5,7 @@
 
 mod app;
 mod config;
+mod history;
 mod ui;
 mod yt;
 
@@ -36,6 +37,7 @@ fn run(terminal: &mut DefaultTerminal) -> Result<()> {
     // Must run after entering the alternate screen and before reading events: it queries the terminal.
     let picker = Picker::from_query_stdio().unwrap_or_else(|_| Picker::halfblocks());
     let mut app = App::new(picker);
+    app.load_history();
 
     loop {
         terminal.draw(|frame| ui::draw(frame, &mut app))?;

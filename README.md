@@ -72,7 +72,12 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | --------------------- | ------------------------------ |
 | `enter`               | run the search                 |
 | `esc` / `tab` / `down` | go to the results             |
+| `left` / `right`, `home` / `end` (`ctrl+a` / `ctrl+e`) | move the cursor |
+| `backspace` / `delete` | delete before / after the cursor |
+| `ctrl+w`              | delete the previous word       |
 | `ctrl+u`              | clear the query                |
+| `up` / `ctrl+p`, `ctrl+n` | previous / next search from history |
+| `ctrl+r`              | history popup (`j`/`k`, `enter` to pick, `esc` to close) |
 
 **Results**
 
@@ -84,6 +89,7 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `a`                | play audio only                         |
 | `space`            | pause / resume                          |
 | `s`                | stop                                    |
+| `H`                | show play history                       |
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |
@@ -118,7 +124,8 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
   "mpv_cmd": "mpv",
   "curl_cmd": "curl",
   "results": 20,
-  "ytdl_format": "bestvideo[height<=720]+bestaudio/best"
+  "ytdl_format": "bestvideo[height<=720]+bestaudio/best",
+  "history_size": 100
 }
 ```
 
@@ -129,6 +136,7 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
 | `curl_cmd`    | Command used to download thumbnails.                                                                  |
 | `results`     | Number of results per search.                                                                         |
 | `ytdl_format` | yt-dlp format string passed to mpv for video. Without a cap mpv picks the best stream (4K/AV1), which can stutter or drift out of sync on modest hardware. Audio always uses `bestaudio/best`. |
+| `history_size` | Entries kept in each history (searches and plays). `0` disables history. Stored as `searches` and `plays.jsonl` next to `config.json`. |
 
 Your own `~/.config/mpv/mpv.conf` still applies on top.
 
@@ -146,6 +154,7 @@ Blocking work runs on plain threads and reports back through a channel, so the U
 src/
   main.rs        terminal setup and event loop
   config.rs      config.json loading
+  history.rs     search and play history files
   yt/            backend: search, thumbnails, playback, pause (yt-dlp / curl / mpv)
   app/           state, key handling, events coming back from threads
   ui/            rendering: search box, results, preview, status bar
