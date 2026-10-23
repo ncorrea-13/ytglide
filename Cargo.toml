@@ -16,3 +16,4 @@ anyhow = "1"
 [profile.release]
 opt-level = "s"
 lto = true
+strip = true
