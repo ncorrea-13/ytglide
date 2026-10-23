@@ -91,6 +91,7 @@ Type a query and press `enter`. The results appear on the left and the thumbnail
 | `space`            | pause / resume                          |
 | `s`                | stop                                    |
 | `H`                | show play history                       |
+| `?` / `F1`         | keybindings help (`F1` works everywhere) |
 | `p`                | toggle preview (narrow terminals only)  |
 | `/`, `i`, `tab`    | back to the search box                  |
 | `q` / `esc`        | quit                                    |

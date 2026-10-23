@@ -10,10 +10,15 @@ impl App {
             self.should_quit = true;
             return;
         }
+        if key.code == KeyCode::F(1) {
+            self.toggle_help();
+            return;
+        }
         match self.focus {
             Focus::Search => self.handle_search_key(key),
             Focus::List => self.handle_list_key(key),
             Focus::History => self.handle_history_key(key),
+            Focus::Help => self.focus = self.help_from,
         }
     }
 
@@ -107,6 +112,7 @@ impl App {
                 }
             }
             KeyCode::Char('H') => self.show_history(),
+            KeyCode::Char('?') => self.toggle_help(),
             KeyCode::Char('p') => self.show_preview = !self.show_preview,
             _ => {}
         }
@@ -187,6 +193,18 @@ mod tests {
         press(&mut app, KeyCode::Enter);
         assert_eq!(app.query, "one");
         assert!(app.focus == Focus::Search);
+    }
+
+    #[test]
+    fn help_opens_with_f1_and_any_key_returns() {
+        let mut app = App::new(Picker::halfblocks());
+        app.focus = Focus::List;
+        press(&mut app, KeyCode::F(1));
+        assert!(app.focus == Focus::Help);
+        press(&mut app, KeyCode::Char('x'));
+        assert!(app.focus == Focus::List);
+        press(&mut app, KeyCode::Char('?'));
+        assert!(app.focus == Focus::Help);
     }
 
     #[test]

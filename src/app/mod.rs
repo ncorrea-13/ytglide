@@ -23,6 +23,7 @@ pub enum Focus {
     Search,
     List,
     History,
+    Help,
 }
 
 pub enum Thumb {
@@ -44,6 +45,7 @@ pub struct App {
     pub searches: Vec<String>,
     pub hist_list: ListState,
     hist_pos: usize,
+    help_from: Focus,
     pub history_view: bool,
     pub results: Vec<yt::Video>,
     pub list: ListState,
@@ -71,6 +73,7 @@ impl App {
             searches: Vec::new(),
             hist_list: ListState::default(),
             hist_pos: 0,
+            help_from: Focus::Search,
             history_view: false,
             results: Vec::new(),
             list: ListState::default(),
@@ -147,6 +150,15 @@ impl App {
         self.hist_pos = pos;
         self.query = self.searches.get(pos).cloned().unwrap_or_default();
         self.cursor = self.query.len();
+    }
+
+    fn toggle_help(&mut self) {
+        if self.focus == Focus::Help {
+            self.focus = self.help_from;
+        } else {
+            self.help_from = self.focus;
+            self.focus = Focus::Help;
+        }
     }
 
     fn open_history(&mut self) {
