@@ -20,6 +20,7 @@ pub const MUTED: Style = Style::new().add_modifier(Modifier::DIM);
 pub const ERROR: Style = Style::new().fg(Color::Red);
 pub const HISTORY: Style = Style::new().fg(Color::Yellow);
 pub const HELP: Style = Style::new().fg(Color::Magenta);
+pub const WATCHED: Style = Style::new().fg(Color::Blue);
 pub const OK: Style = Style::new().fg(Color::Green);
 const BOLD: Style = Style::new().add_modifier(Modifier::BOLD);
 
@@ -134,9 +135,10 @@ fn draw_history(frame: &mut Frame, app: &mut App) {
 }
 
 // Each mode owns one color: the badge, the focused panel and the key hints all follow it.
-fn mode_style(focus: Focus) -> Style {
-    match focus {
+pub(super) fn mode_style(app: &App) -> Style {
+    match app.focus {
         Focus::Search => ACCENT,
+        Focus::List if app.history_view => WATCHED,
         Focus::List => OK,
         Focus::History => HISTORY,
         Focus::Help => HELP,
@@ -204,9 +206,10 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let [info, keys] = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(area);
 
-    let accent = mode_style(app.focus);
+    let accent = mode_style(app);
     let mode = match app.focus {
         Focus::Search => " SEARCH ",
+        Focus::List if app.history_view => " WATCHED ",
         Focus::List => " BROWSE ",
         Focus::History => " HISTORY ",
         Focus::Help => " HELP ",
