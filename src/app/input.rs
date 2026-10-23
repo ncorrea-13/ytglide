@@ -208,6 +208,25 @@ mod tests {
     }
 
     #[test]
+    fn load_more_stops_when_exhausted() {
+        let mut app = App::new(Picker::halfblocks());
+        app.focus = Focus::List;
+        app.last_query = Some("lofi".into());
+        app.fetched = 20;
+        app.exhausted = true;
+        app.results = vec![crate::yt::Video {
+            id: "rFZHOHl-L8A".into(),
+            title: "lofi".into(),
+            channel: String::new(),
+            duration: None,
+            views: None,
+        }];
+        app.list.select(Some(0));
+        press(&mut app, KeyCode::Char('j'));
+        assert!(!app.loading);
+    }
+
+    #[test]
     fn list_navigation_is_clamped() {
         let mut app = App::new(Picker::halfblocks());
         app.focus = Focus::List;

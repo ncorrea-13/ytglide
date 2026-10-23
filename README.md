@@ -146,6 +146,7 @@ Your own `~/.config/mpv/mpv.conf` still applies on top.
 
 - Pausing talks to mpv through a socket at `$XDG_RUNTIME_DIR/ytglide-mpv.sock`. If `XDG_RUNTIME_DIR` is not set, pausing is disabled instead of falling back to a shared directory such as `/tmp`.
 - Duration and view count come from `yt-dlp --flat-playlist`, so some results may not show a duration.
+- Moving past the last result loads the next page and appends it (up to 100 in total); the selection stays where it was. When a page brings nothing new, the status bar says "no more results".
 - Thumbnails are fetched one at a time when you select a video; neighbours are not prefetched.
 
 ## Architecture

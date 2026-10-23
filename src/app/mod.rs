@@ -16,6 +16,9 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
+// Stops endless scrolling from paging through the whole of YouTube.
+const MAX_RESULTS: usize = 100;
+
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 #[derive(Clone, Copy, PartialEq)]
@@ -45,6 +48,9 @@ pub struct App {
     pub searches: Vec<String>,
     pub hist_list: ListState,
     hist_pos: usize,
+    last_query: Option<String>,
+    fetched: usize,
+    exhausted: bool,
     help_from: Focus,
     pub history_view: bool,
     pub results: Vec<yt::Video>,
@@ -73,6 +79,9 @@ impl App {
             searches: Vec::new(),
             hist_list: ListState::default(),
             hist_pos: 0,
+            last_query: None,
+            fetched: 0,
+            exhausted: false,
             help_from: Focus::Search,
             history_view: false,
             results: Vec::new(),
@@ -216,13 +225,32 @@ impl App {
             self.set_error(e.to_string());
         }
         self.hist_pos = self.searches.len();
+        self.start_search(query, 1, config::get().results, false);
+    }
+
+    fn start_search(&mut self, query: String, start: usize, end: usize, more: bool) {
         self.search_seq += 1;
         let seq = self.search_seq;
         self.loading = true;
         self.spawn(move || YtEvent::Searched {
             seq,
-            result: yt::search(&query, config::get().results),
+            result: yt::search(&query, start, end),
+            query,
+            end,
+            more,
         });
+    }
+
+    // Fetches only the next page; the rows already on screen (and the selection) stay untouched.
+    fn load_more(&mut self) {
+        let Some(query) = self.last_query.clone() else {
+            return;
+        };
+        if self.loading || self.history_view || self.exhausted || self.fetched >= MAX_RESULTS {
+            return;
+        }
+        let end = (self.fetched + config::get().results).min(MAX_RESULTS);
+        self.start_search(query, self.fetched + 1, end, true);
     }
 
     fn request_thumbnail(&mut self) {
@@ -244,6 +272,9 @@ impl App {
             return;
         }
         let last = self.results.len() - 1;
+        if delta > 0 && self.list.selected() == Some(last) {
+            self.load_more();
+        }
         let cur = self.list.selected().unwrap_or(0) as isize;
         self.list.select(Some(
             cur.saturating_add(delta).clamp(0, last as isize) as usize
