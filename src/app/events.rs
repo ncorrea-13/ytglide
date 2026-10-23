@@ -29,6 +29,7 @@ impl App {
                     Ok(videos) if videos.is_empty() => self.set_error("no results"),
                     Ok(videos) => {
                         self.results = videos;
+                        self.history_view = false;
                         self.thumbs.clear();
                         self.list.select(Some(0));
                         self.focus = Focus::List;

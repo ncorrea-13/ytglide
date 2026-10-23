@@ -13,6 +13,7 @@ pub struct Config {
     pub curl_cmd: String,
     pub results: usize,
     pub ytdl_format: String,
+    pub history_size: usize,
 }
 
 impl Default for Config {
@@ -23,6 +24,7 @@ impl Default for Config {
             curl_cmd: "curl".to_string(),
             results: 20,
             ytdl_format: "bestvideo[height<=720]+bestaudio/best".to_string(),
+            history_size: 100,
         }
     }
 }
@@ -33,7 +35,7 @@ pub fn get() -> &'static Config {
     CONFIG.get_or_init(load_or_create)
 }
 
-fn config_dir() -> PathBuf {
+pub fn config_dir() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
         return PathBuf::from(xdg).join("ytglide");
     }

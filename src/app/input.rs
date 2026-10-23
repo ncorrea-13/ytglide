@@ -29,6 +29,9 @@ impl App {
                     self.focus = Focus::List;
                 }
             }
+            KeyCode::Up => self.history_older(),
+            KeyCode::Char('p') if ctrl => self.history_older(),
+            KeyCode::Char('n') if ctrl => self.history_newer(),
             KeyCode::Left => {
                 if let Some(c) = self.query[..self.cursor].chars().next_back() {
                     self.cursor -= c.len_utf8();
@@ -88,6 +91,7 @@ impl App {
                     self.set_status("stopped");
                 }
             }
+            KeyCode::Char('H') => self.show_history(),
             KeyCode::Char('p') => self.show_preview = !self.show_preview,
             _ => {}
         }
@@ -140,6 +144,22 @@ mod tests {
         assert_eq!(app.query, "lofi hip ");
         app.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL));
         assert_eq!(app.query, "lofi ");
+    }
+
+    #[test]
+    fn up_and_ctrl_n_walk_the_search_history() {
+        let mut app = App::new(Picker::halfblocks());
+        app.searches = vec!["one".into(), "two".into()];
+        app.hist_pos = 2;
+        press(&mut app, KeyCode::Up);
+        assert_eq!(app.query, "two");
+        press(&mut app, KeyCode::Up);
+        press(&mut app, KeyCode::Up);
+        assert_eq!(app.query, "one");
+        app.handle_key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "two");
+        app.handle_key(KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL));
+        assert_eq!(app.query, "");
     }
 
     #[test]

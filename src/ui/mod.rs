@@ -149,9 +149,15 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             ("←/→", "move"),
             ("ctrl+w", "del word"),
             ("ctrl+u", "clear"),
+            ("↑", "history"),
             ("esc", "results"),
         ],
-        Focus::List => vec![("j/k", "move"), ("enter", "play"), ("a", "audio")],
+        Focus::List => vec![
+            ("j/k", "move"),
+            ("enter", "play"),
+            ("a", "audio"),
+            ("H", "history"),
+        ],
     };
     if app.focus == Focus::List {
         if app.playing.is_some() {
