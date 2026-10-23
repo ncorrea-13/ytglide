@@ -13,7 +13,7 @@ use ratatui::{
 use ratatui_image::StatefulImage;
 
 pub fn draw(frame: &mut Frame, app: &mut App, area: Rect) {
-    let block = panel("Preview", false);
+    let block = panel("Preview", None);
     let inner = block.inner(area).inner(Margin::new(1, 0));
     frame.render_widget(block, area);
 

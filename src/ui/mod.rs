@@ -8,7 +8,7 @@ use crate::app::{App, Focus};
 use crate::yt;
 use ratatui::{
     Frame,
-    layout::{Constraint, Flex, Layout, Margin, Position, Rect},
+    layout::{Alignment, Constraint, Flex, Layout, Margin, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
@@ -62,7 +62,7 @@ fn draw_history(frame: &mut Frame, app: &mut App) {
     let [popup] = Layout::vertical([Constraint::Length(h)])
         .flex(Flex::Center)
         .areas(popup);
-    let block = panel("History", true);
+    let block = panel("History", Some(HISTORY));
     let inner = block.inner(popup);
     frame.render_widget(Clear, popup);
     frame.render_widget(block, popup);
@@ -81,11 +81,19 @@ fn draw_history(frame: &mut Frame, app: &mut App) {
     );
 }
 
-pub(super) fn panel(title: &str, focused: bool) -> Block<'_> {
-    let (border, title_style) = if focused {
-        (ACCENT, ACCENT.patch(BOLD))
-    } else {
-        (MUTED, MUTED)
+// Each mode owns one color: the badge, the focused panel and the key hints all follow it.
+fn mode_style(focus: Focus) -> Style {
+    match focus {
+        Focus::Search => ACCENT,
+        Focus::List => OK,
+        Focus::History => HISTORY,
+    }
+}
+
+pub(super) fn panel(title: &str, accent: Option<Style>) -> Block<'_> {
+    let (border, title_style) = match accent {
+        Some(a) => (a, a.patch(BOLD)),
+        None => (MUTED, MUTED),
     };
     Block::bordered()
         .border_type(BorderType::Rounded)
@@ -122,7 +130,7 @@ pub(super) fn fit(s: &str, max: usize) -> String {
 
 fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
     let focused = app.focus == Focus::Search;
-    let block = panel("Search", focused);
+    let block = panel("Search", focused.then_some(ACCENT));
     let inner = block.inner(area).inner(Margin::new(1, 0));
     frame.render_widget(block, area);
     let text = if app.query.is_empty() && !focused {
@@ -143,15 +151,17 @@ fn draw_search(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     let [info, keys] = Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(area);
 
-    let (mode, mode_style) = match app.focus {
-        Focus::Search => (" SEARCH ", ACCENT),
-        Focus::List => (" BROWSE ", OK),
-        Focus::History => (" HISTORY ", HISTORY),
+    let accent = mode_style(app.focus);
+    let mode = match app.focus {
+        Focus::Search => " SEARCH ",
+        Focus::List => " BROWSE ",
+        Focus::History => " HISTORY ",
     };
+    let version = format!("ytglide v{}", env!("CARGO_PKG_VERSION"));
     let mut spans = vec![
         Span::styled(
             mode,
-            mode_style.add_modifier(Modifier::REVERSED | Modifier::BOLD),
+            accent.add_modifier(Modifier::REVERSED | Modifier::BOLD),
         ),
         Span::raw("  "),
     ];
@@ -171,11 +181,16 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         } else {
             ("♪ playing", OK)
         };
-        let room = (info.width as usize).saturating_sub(mode.len() + label.len() + 6);
+        let room =
+            (info.width as usize).saturating_sub(mode.len() + label.len() + version.len() + 8);
         spans.push(Span::styled(label, style));
         spans.push(Span::styled(format!("  {}", fit(title, room)), BOLD));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), info);
+    frame.render_widget(
+        Paragraph::new(Span::styled(format!("{version} "), accent)).alignment(Alignment::Right),
+        info,
+    );
 
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
@@ -207,7 +222,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
     }
     let mut spans = vec![Span::raw(" ")];
     for (key, action) in hints {
-        spans.push(Span::styled(key, ACCENT.patch(BOLD)));
+        spans.push(Span::styled(key, accent.patch(BOLD)));
         spans.push(Span::styled(format!(" {action}   "), MUTED));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), keys);
