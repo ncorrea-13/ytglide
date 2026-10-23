@@ -8,7 +8,7 @@ use crate::app::{App, Focus};
 use crate::yt;
 use ratatui::{
     Frame,
-    layout::{Constraint, Flex, Layout, Margin, Position, Rect},
+    layout::{Alignment, Constraint, Flex, Layout, Margin, Position, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Clear, List, ListItem, Paragraph},
@@ -157,6 +157,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         Focus::List => " BROWSE ",
         Focus::History => " HISTORY ",
     };
+    let version = format!("ytglide v{}", env!("CARGO_PKG_VERSION"));
     let mut spans = vec![
         Span::styled(
             mode,
@@ -180,11 +181,16 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
         } else {
             ("♪ playing", OK)
         };
-        let room = (info.width as usize).saturating_sub(mode.len() + label.len() + 6);
+        let room =
+            (info.width as usize).saturating_sub(mode.len() + label.len() + version.len() + 8);
         spans.push(Span::styled(label, style));
         spans.push(Span::styled(format!("  {}", fit(title, room)), BOLD));
     }
     frame.render_widget(Paragraph::new(Line::from(spans)), info);
+    frame.render_widget(
+        Paragraph::new(Span::styled(format!("{version} "), accent)).alignment(Alignment::Right),
+        info,
+    );
 
     let mut hints: Vec<(&str, &str)> = match app.focus {
         Focus::Search => vec![
