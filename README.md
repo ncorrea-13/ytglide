@@ -181,6 +181,10 @@ cargo clippy --all-targets -- -D warnings
 
 The tests cover the output parsing, the formatting helpers and basic key handling. The UI itself has no automated tests; check it by running it.
 
+## Status
+
+Stable / Feature-complete. This software does everything I need it to do. I'll keep it working if dependencies break, but no new features are planned. Issues and PRs are still welcome.
+
 ## Disclaimer
 
 ytglide is not affiliated with, endorsed by, or sponsored by YouTube or Google. It only runs `yt-dlp`, `mpv` and `curl` on your machine, and it is provided as is, without warranty. You are responsible for how you use it and for following YouTube's terms of service.
