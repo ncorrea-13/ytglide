@@ -61,10 +61,12 @@ pub struct App {
     pub status: Option<Status>,
     pub show_preview: bool,
     pub playing: Option<(Child, String)>,
+    pub resolving: bool,
     pub paused: bool,
     pub should_quit: bool,
     tick_count: usize,
     search_seq: u64,
+    play_seq: u64,
     picker: Picker,
     tx: Sender<YtEvent>,
     rx: Receiver<YtEvent>,
@@ -93,10 +95,12 @@ impl App {
             status: None,
             show_preview: false,
             playing: None,
+            resolving: false,
             paused: false,
             should_quit: false,
             tick_count: 0,
             search_seq: 0,
+            play_seq: 0,
             picker,
             tx,
             rx,
@@ -299,11 +303,26 @@ impl App {
             return;
         };
         self.stop_player();
-        match yt::play(&v.id, audio_only) {
+        if !config::get().warm_urls {
+            self.started(&v, yt::play(&v.id, audio_only));
+            return;
+        }
+        self.resolving = true;
+        let seq = self.play_seq;
+        self.spawn(move || YtEvent::Resolved {
+            seq,
+            result: yt::resolve(&v.id, audio_only),
+            video: v,
+            audio_only,
+        });
+    }
+
+    fn started(&mut self, v: &yt::Video, child: anyhow::Result<Child>) {
+        match child {
             Ok(child) => {
                 self.playing = Some((child, v.title.clone()));
                 self.paused = false;
-                if let Err(e) = history::record_play(&v) {
+                if let Err(e) = history::record_play(v) {
                     self.set_error(e.to_string());
                 }
             }
@@ -322,8 +341,11 @@ impl App {
     }
 
     pub fn stop_player(&mut self) -> bool {
+        // Bumping the sequence makes the answer of an in-flight resolve stale.
+        self.play_seq += 1;
+        let resolving = std::mem::take(&mut self.resolving);
         let Some((mut child, _)) = self.playing.take() else {
-            return false;
+            return resolving;
         };
         let _ = yt::quit();
         let _ = child.kill();

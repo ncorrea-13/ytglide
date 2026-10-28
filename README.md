@@ -38,8 +38,10 @@ This is a personal project. See the [disclaimer](#disclaimer).
 | --------------- | ----------------------------- |
 | `yt-dlp`        | search and stream resolution  |
 | `mpv`           | playback                      |
-| `curl`          | thumbnail download            |
+| `curl`          | thumbnails and URL warm-up (needed even with `warm_urls` off, for thumbnails) |
 | Rust toolchain  | building (stable, edition 2024) |
+
+ytglide only runs those three. `yt-dlp` itself needs a JavaScript runtime (deno by default, or node) to read YouTube; see the yt-dlp docs.
 
 For sharp thumbnails use a terminal with an image protocol (WezTerm, Kitty, Ghostty, foot, iTerm2). Any other terminal still works with halfblocks, just at lower fidelity.
 
@@ -135,6 +137,7 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
   "curl_cmd": "curl",
   "results": 20,
   "ytdl_format": "bestvideo[height<=720]+bestaudio/best",
+  "warm_urls": true,
   "history_size": 100
 }
 ```
@@ -146,6 +149,7 @@ On first run ytglide creates `~/.config/ytglide/config.json` (or `$XDG_CONFIG_HO
 | `curl_cmd`    | Command used to download thumbnails.                                                                  |
 | `results`     | Number of results per search.                                                                         |
 | `ytdl_format` | yt-dlp format string passed to mpv for video. Without a cap mpv picks the best stream (4K/AV1), which can stutter or drift out of sync on modest hardware. Audio always uses `bestaudio/best`. |
+| `warm_urls`   | Resolve the stream URLs with yt-dlp (`ytdl_format` applies) and warm them with curl before handing them to mpv, which then plays them directly (full seeking). YouTube's CDN often answers 403 to the first request for a fresh URL; yt-dlp retries, but ffmpeg inside mpv does not, so playback failed at random. Set `false` to let mpv resolve the URL itself. |
 | `history_size` | Entries kept in each history (searches and plays). `0` disables history. Stored as `searches` and `plays.jsonl` next to `config.json`. |
 
 Your own `~/.config/mpv/mpv.conf` still applies on top.

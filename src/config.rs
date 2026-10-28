@@ -13,6 +13,7 @@ pub struct Config {
     pub curl_cmd: String,
     pub results: usize,
     pub ytdl_format: String,
+    pub warm_urls: bool,
     pub history_size: usize,
 }
 
@@ -24,6 +25,7 @@ impl Default for Config {
             curl_cmd: "curl".to_string(),
             results: 20,
             ytdl_format: "bestvideo[height<=720]+bestaudio/best".to_string(),
+            warm_urls: true,
             history_size: 100,
         }
     }
