@@ -87,6 +87,25 @@ pub fn quit() -> Result<()> {
     Ok(())
 }
 
+// A killed mpv leaves its socket behind; a stale file would make the next bind fail.
+fn bind_socket(cmd: &mut Command) {
+    if let Some(sock) = socket_path() {
+        if let Some(parent) = sock.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::remove_file(&sock);
+        cmd.arg(format!("--input-ipc-server={}", sock.display()));
+    }
+}
+
+fn launch(mut cmd: Command) -> Result<Child> {
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .context("could not run mpv")
+}
+
 // The caller owns the child so playback can be stopped from the UI.
 pub fn play(id: &str, audio_only: bool) -> Result<Child> {
     if !is_valid_id(id) {
@@ -103,18 +122,7 @@ pub fn play(id: &str, audio_only: bool) -> Result<Child> {
             crate::config::get().ytdl_format
         ));
     }
-    if let Some(sock) = socket_path() {
-        // A killed mpv leaves its socket behind; a stale file would make the next bind fail.
-        if let Some(parent) = sock.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = std::fs::remove_file(&sock);
-        cmd.arg(format!("--input-ipc-server={}", sock.display()));
-    }
-    cmd.arg(format!("https://www.youtube.com/watch?v={id}"))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .context("could not run mpv")
+    bind_socket(&mut cmd);
+    cmd.arg(format!("https://www.youtube.com/watch?v={id}"));
+    launch(cmd)
 }
