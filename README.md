@@ -38,8 +38,10 @@ This is a personal project. See the [disclaimer](#disclaimer).
 | --------------- | ----------------------------- |
 | `yt-dlp`        | search and stream resolution  |
 | `mpv`           | playback                      |
-| `curl`          | thumbnail download            |
+| `curl`          | thumbnails and URL warm-up (needed even with `warm_urls` off, for thumbnails) |
 | Rust toolchain  | building (stable, edition 2024) |
+
+ytglide only runs those three. `yt-dlp` itself needs a JavaScript runtime (deno by default, or node) to read YouTube; see the yt-dlp docs.
 
 For sharp thumbnails use a terminal with an image protocol (WezTerm, Kitty, Ghostty, foot, iTerm2). Any other terminal still works with halfblocks, just at lower fidelity.
 
