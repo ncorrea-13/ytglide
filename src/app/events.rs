@@ -17,6 +17,12 @@ pub enum YtEvent {
         id: String,
         result: anyhow::Result<DynamicImage>,
     },
+    Resolved {
+        seq: u64,
+        video: yt::Video,
+        audio_only: bool,
+        result: anyhow::Result<yt::Stream>,
+    },
 }
 
 impl App {
@@ -73,6 +79,24 @@ impl App {
                     Err(_) => Thumb::Failed,
                 };
             }
+            YtEvent::Resolved {
+                seq,
+                video,
+                audio_only,
+                result,
+            } => {
+                // The player was stopped or replaced while yt-dlp worked: drop the stale answer.
+                if seq != self.play_seq {
+                    return;
+                }
+                self.resolving = false;
+                let child = match result {
+                    Ok(stream) => yt::play_stream(&stream, audio_only),
+                    // Could not resolve here: let mpv try with its own yt-dlp hook.
+                    Err(_) => yt::play(&video.id, audio_only),
+                };
+                self.started(&video, child);
+            }
         }
     }
 }
@@ -124,6 +148,31 @@ mod tests {
         answer(&mut app, seq, &["aaaaaaaaaaa"]);
         assert_eq!(app.results.len(), 1);
         assert!(app.exhausted);
+    }
+
+    #[test]
+    fn stale_resolve_does_not_start_the_player() {
+        let mut app = App::new(Picker::halfblocks());
+        app.play_seq = 2;
+        app.resolving = true;
+        app.apply_event(YtEvent::Resolved {
+            seq: 1,
+            video: video("aaaaaaaaaaa"),
+            audio_only: true,
+            result: Err(anyhow::anyhow!("late")),
+        });
+        assert!(app.playing.is_none());
+        assert!(app.resolving);
+    }
+
+    #[test]
+    fn stop_cancels_a_pending_resolve() {
+        let mut app = App::new(Picker::halfblocks());
+        app.resolving = true;
+        let seq = app.play_seq;
+        assert!(app.stop_player());
+        assert!(!app.resolving);
+        assert_ne!(app.play_seq, seq);
     }
 
     #[test]

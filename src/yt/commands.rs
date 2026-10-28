@@ -1,14 +1,17 @@
 // Copyright (c) 2026 Nicolás Correa
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::model::{Video, is_valid_id, parse_search};
+use super::model::{Stream, Video, is_valid_id, parse_search, parse_stream};
 use anyhow::{Context, Result, bail};
 use image::DynamicImage;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::thread;
 use std::time::Duration;
+
+const WARM_TRIES: usize = 6;
 
 // "yt-dlp" or e.g. "flatpak run io.github.yt_dlp" from config: first word is the program.
 fn command(line: &str) -> Command {
@@ -87,6 +90,53 @@ pub fn quit() -> Result<()> {
     Ok(())
 }
 
+pub fn resolve(id: &str, audio_only: bool) -> Result<Stream> {
+    if !is_valid_id(id) {
+        bail!("invalid video id");
+    }
+    let cfg = crate::config::get();
+    let format = if audio_only {
+        "bestaudio/best"
+    } else {
+        cfg.ytdl_format.as_str()
+    };
+    let out = command(&cfg.yt_dlp_cmd)
+        .args(["-J", "--no-playlist", "--no-warnings", "-f", format])
+        .arg(format!("https://www.youtube.com/watch?v={id}"))
+        .stdin(Stdio::null())
+        .output()
+        .context("could not run yt-dlp")?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        bail!("yt-dlp: {}", err.lines().last().unwrap_or("failed").trim());
+    }
+    let stream = parse_stream(&String::from_utf8_lossy(&out.stdout))?;
+    let agent = stream.user_agent.as_deref().unwrap_or("Mozilla/5.0");
+    for url in &stream.urls {
+        warm(url, agent);
+    }
+    Ok(stream)
+}
+
+// A fresh googlevideo URL answers 403 to its first request or two. yt-dlp's downloader retries so it never
+// notices, but ffmpeg opens once and gives up: hit the URL until it answers before handing it to mpv.
+fn warm(url: &str, user_agent: &str) {
+    for attempt in 0..WARM_TRIES {
+        if attempt > 0 {
+            thread::sleep(Duration::from_secs(1));
+        }
+        let out = command(&crate::config::get().curl_cmd)
+            .args(["-s", "-o", "/dev/null", "-w", "%{http_code}"])
+            .args(["--max-time", "10", "-r", "0-0", "-A", user_agent])
+            .arg(url)
+            .stdin(Stdio::null())
+            .output();
+        if matches!(out, Ok(o) if matches!(o.stdout.as_slice(), b"200" | b"206")) {
+            return;
+        }
+    }
+}
+
 // A killed mpv leaves its socket behind; a stale file would make the next bind fail.
 fn bind_socket(cmd: &mut Command) {
     if let Some(sock) = socket_path() {
@@ -104,6 +154,26 @@ fn launch(mut cmd: Command) -> Result<Child> {
         .stderr(Stdio::null())
         .spawn()
         .context("could not run mpv")
+}
+
+pub fn play_stream(stream: &Stream, audio_only: bool) -> Result<Child> {
+    let (main, sides) = stream.urls.split_first().context("no stream to play")?;
+    let mut cmd = command(&crate::config::get().mpv_cmd);
+    cmd.arg("--ytdl=no");
+    if let Some(agent) = &stream.user_agent {
+        cmd.arg(format!("--user-agent={agent}"));
+    }
+    if audio_only {
+        cmd.arg("--no-video");
+    } else {
+        cmd.arg("--force-window=immediate");
+    }
+    bind_socket(&mut cmd);
+    for url in sides {
+        cmd.arg(format!("--audio-file={url}"));
+    }
+    cmd.arg(main);
+    launch(cmd)
 }
 
 // The caller owns the child so playback can be stopped from the UI.

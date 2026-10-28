@@ -55,6 +55,34 @@ pub fn parse_search(json: &str) -> Result<Vec<Video>> {
         .collect())
 }
 
+#[derive(Debug, PartialEq)]
+pub struct Stream {
+    // The first one is the main file; the rest (audio of a video+audio selection) are side tracks.
+    pub urls: Vec<String>,
+    pub user_agent: Option<String>,
+}
+
+pub fn parse_stream(json: &str) -> Result<Stream> {
+    let v: serde_json::Value = serde_json::from_str(json).context("unexpected yt-dlp output")?;
+    // Merged selections list their streams in requested_formats; a single format sits at the top level.
+    let formats = match v["requested_formats"].as_array() {
+        Some(f) if !f.is_empty() => f.as_slice(),
+        _ => std::slice::from_ref(&v),
+    };
+    // URLs become mpv arguments: refuse anything that is not plain https.
+    let urls = formats
+        .iter()
+        .map(|f| f["url"].as_str().filter(|u| u.starts_with("https://")))
+        .map(|u| u.map(String::from))
+        .collect::<Option<Vec<_>>>()
+        .context("yt-dlp returned no playable stream")?;
+    let user_agent = formats[0]["http_headers"]["User-Agent"]
+        .as_str()
+        .or(v["http_headers"]["User-Agent"].as_str())
+        .map(String::from);
+    Ok(Stream { urls, user_agent })
+}
+
 pub fn fmt_duration(secs: u64) -> String {
     let (h, m, s) = (secs / 3600, secs / 60 % 60, secs % 60);
     if h > 0 {
@@ -89,6 +117,38 @@ mod tests {
         assert_eq!(v[0].channel, "Lofi Girl");
         assert_eq!(v[1].channel, "Up");
         assert_eq!(v[1].duration, Some(65));
+    }
+
+    #[test]
+    fn stream_from_merged_formats_keeps_video_first() {
+        let json = r#"{"http_headers":{"User-Agent":"top"},"requested_formats":[
+            {"url":"https://v.example/video","http_headers":{"User-Agent":"UA"}},
+            {"url":"https://a.example/audio"}
+        ]}"#;
+        let s = parse_stream(json).expect("valid json");
+        assert_eq!(
+            s.urls,
+            ["https://v.example/video", "https://a.example/audio"]
+        );
+        assert_eq!(s.user_agent.as_deref(), Some("UA"));
+    }
+
+    #[test]
+    fn stream_from_a_single_format() {
+        let json = r#"{"url":"https://a.example/audio","http_headers":{"User-Agent":"UA"}}"#;
+        let s = parse_stream(json).expect("valid json");
+        assert_eq!(s.urls, ["https://a.example/audio"]);
+        assert_eq!(s.user_agent.as_deref(), Some("UA"));
+    }
+
+    #[test]
+    fn stream_rejects_urls_that_are_not_https() {
+        assert!(parse_stream(r#"{"url":"--script=evil"}"#).is_err());
+        assert!(
+            parse_stream(r#"{"requested_formats":[{"url":"https://ok"},{"url":"file:///x"}]}"#)
+                .is_err()
+        );
+        assert!(parse_stream(r#"{}"#).is_err());
     }
 
     #[test]

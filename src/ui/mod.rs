@@ -229,6 +229,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect, wide: bool) {
             format!("{} searching…", app.spinner()),
             ACCENT,
         ));
+    } else if app.resolving {
+        spans.push(Span::styled(format!("{} starting…", app.spinner()), ACCENT));
     } else if let Some(s) = &app.status {
         spans.push(Span::styled(
             s.text.as_str(),
